@@ -70,7 +70,7 @@ See spec 4.2 for the full tree. Responsibilities, one line each:
 **Interfaces:**
 - Produces: npm scripts `dev`, `build`, `preview`, `test`, `test:watch`, `typecheck`, `fonts`, `og:placeholder`, `og`, `deploy`, `deploy:preview` used by every later task.
 
-- [ ] **Step 1: Initialize npm and install exact versions**
+- [x] **Step 1: Initialize npm and install exact versions**
 
 ```bash
 cd /c/Users/parsa/parsanaji.com
@@ -81,7 +81,7 @@ npm install --save-exact --save-dev vite@8.3.4 typescript@5.9.3 @types/three@0.1
 
 Expected: `package-lock.json` created; `node_modules/three/package.json` shows `"version": "0.186.1"`; `@types/node` resolved to the newest 22.x (the tests reference `process`, and `tsc` needs its types).
 
-- [ ] **Step 2: Replace `package.json` with the project manifest** (keep the `dependencies` / `devDependencies` blocks npm just wrote; replace everything else)
+- [x] **Step 2: Replace `package.json` with the project manifest** (keep the `dependencies` / `devDependencies` blocks npm just wrote; replace everything else)
 
 ```json
 {
@@ -106,7 +106,7 @@ Expected: `package-lock.json` created; `node_modules/three/package.json` shows `
 }
 ```
 
-- [ ] **Step 3: Write `tsconfig.json`**
+- [x] **Step 3: Write `tsconfig.json`**
 
 ```json
 {
@@ -130,7 +130,7 @@ Expected: `package-lock.json` created; `node_modules/three/package.json` shows `
 }
 ```
 
-- [ ] **Step 4: Write `vite.config.ts`, `vitest.config.ts`, `src/vite-env.d.ts`**
+- [x] **Step 4: Write `vite.config.ts`, `vitest.config.ts`, `src/vite-env.d.ts`**
 
 `vite.config.ts`:
 ```ts
@@ -162,7 +162,7 @@ export default defineConfig({
 /// <reference types="vite/client" />
 ```
 
-- [ ] **Step 5: Write `.gitignore` and `.env.example`**
+- [x] **Step 5: Write `.gitignore` and `.env.example`**
 
 `.gitignore`:
 ```
@@ -182,7 +182,7 @@ CLOUDFLARE_ACCOUNT_ID=
 CLOUDFLARE_ZONE_ID=
 ```
 
-- [ ] **Step 6: Write the environment test** (`tests/env.test.ts`) — the clock relies on full ICU and the scripts on `fetch` and `process.loadEnvFile`
+- [x] **Step 6: Write the environment test** (`tests/env.test.ts`) — the clock relies on full ICU and the scripts on `fetch` and `process.loadEnvFile`
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -208,12 +208,12 @@ describe('runtime environment', () => {
 });
 ```
 
-- [ ] **Step 7: Run the toolchain**
+- [x] **Step 7: Run the toolchain**
 
 Run: `npm test && npm run typecheck`
 Expected: 3 tests pass; `tsc` prints nothing.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add package.json package-lock.json tsconfig.json vite.config.ts vitest.config.ts .gitignore .env.example src/vite-env.d.ts tests/env.test.ts
@@ -234,7 +234,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: the two font URLs `/fonts/GeistSans-Black.subset.woff2` and `/fonts/GeistMono-Regular.subset.woff2` referenced by `src/styles.css` and `index.html` (Task 3). Display subset covers `A–Z a–z . space`; mono subset covers printable ASCII plus `·` (U+00B7).
 
-- [ ] **Step 1: Write `scripts/subset-fonts.mjs`**
+- [x] **Step 1: Write `scripts/subset-fonts.mjs`**
 
 ```js
 // Generates the two self-hosted font subsets from the vendored Geist sources in scripts/fonts-src/ (SIL OFL 1.1).
@@ -275,17 +275,17 @@ if (total > 40 * 1024) {
 }
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `npm run fonts`
 Expected: two files written, each well under 20 KB, `total:` under 40 KB, exit 0. If `subset-font` rejects the `.woff2` input, fetch the `.ttf` siblings without installing the package: run `npm pack geist@1.7.2`, extract `package/dist/fonts/geist-sans/Geist-Black.ttf` and `package/dist/fonts/geist-mono/GeistMono-Regular.ttf` into `scripts/fonts-src/`, point both `src` names at them, delete the tarball, and rerun.
 
-- [ ] **Step 3: Confirm the files exist**
+- [x] **Step 3: Confirm the files exist**
 
 Run: `ls -la public/fonts`
 Expected: both `.subset.woff2` files listed with non-zero sizes, plus `LICENSE.txt` (the SIL OFL 1.1 text copied from `scripts/fonts-src/`, served at `/fonts/LICENSE.txt` because subset fonts are Modified Versions under OFL condition 2).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add scripts/subset-fonts.mjs public/fonts
@@ -307,7 +307,7 @@ This page is what parsanaji.com serves after slice 1: the name in Geist 900, the
 **Interfaces:**
 - Produces: `CONTENT` (`src/content.ts`), `formatClock(date, timeZone?, locale?) → { time, zone }` and `startClock(timeEl, zoneEl, timeZone, now?) → stop()` (`src/ui/clock.ts`), `initExitLine(linkedinUrl)` (`src/ui/exitLine.ts`). DOM ids used by later tasks: `#field` (canvas), `#static`, `#chrome`, `#clock-time`, `#clock-zone`, `#linkedin`, `#linkedin-sep`, `#cursor`.
 
-- [ ] **Step 1: Write the failing clock test** (`tests/clock.test.ts`)
+- [x] **Step 1: Write the failing clock test** (`tests/clock.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -332,12 +332,12 @@ describe('formatClock', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `npx vitest run tests/clock.test.ts`
 Expected: FAIL — cannot resolve `../src/ui/clock`.
 
-- [ ] **Step 3: Write `src/ui/clock.ts`**
+- [x] **Step 3: Write `src/ui/clock.ts`**
 
 ```ts
 export interface ClockParts {
@@ -382,12 +382,12 @@ export function startClock(
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run tests/clock.test.ts`
 Expected: 4 tests pass.
 
-- [ ] **Step 5: Write `src/content.ts` and `src/ui/exitLine.ts`**
+- [x] **Step 5: Write `src/content.ts` and `src/ui/exitLine.ts`**
 
 `src/content.ts`:
 ```ts
@@ -418,7 +418,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
 }
 ```
 
-- [ ] **Step 6: Write `index.html`** (final markup; no inline styles or scripts other than the JSON-LD data block)
+- [x] **Step 6: Write `index.html`** (final markup; no inline styles or scripts other than the JSON-LD data block)
 
 ```html
 <!doctype html>
@@ -489,7 +489,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
 </html>
 ```
 
-- [ ] **Step 7: Write `src/styles.css`** (final; the 2 s chrome fade-in is a CSS animation so it also works without JavaScript)
+- [x] **Step 7: Write `src/styles.css`** (final; the 2 s chrome fade-in is a CSS animation so it also works without JavaScript)
 
 ```css
 @font-face {
@@ -669,7 +669,7 @@ html.has-ring .exit a { cursor: pointer; }
 }
 ```
 
-- [ ] **Step 8: Write the slice-1 `src/main.ts`** (shows the static block; Task 14 replaces this file)
+- [x] **Step 8: Write the slice-1 `src/main.ts`** (shows the static block; Task 14 replaces this file)
 
 ```ts
 import { CONTENT } from './content';
@@ -698,7 +698,7 @@ function boot(): void {
 boot();
 ```
 
-- [ ] **Step 9: Write `public/_headers`, `public/robots.txt`, `public/favicon.svg`**
+- [x] **Step 9: Write `public/_headers`, `public/robots.txt`, `public/favicon.svg`**
 
 `public/_headers` (exactly; Pages applies every matching block):
 ```
@@ -744,7 +744,7 @@ Allow: /
 </svg>
 ```
 
-- [ ] **Step 10: Write `scripts/og-placeholder.mjs` and generate `public/og.png`** (slice 5 replaces it with the real particle capture; this keeps the OG tags valid from day one and needs no fonts)
+- [x] **Step 10: Write `scripts/og-placeholder.mjs` and generate `public/og.png`** (slice 5 replaces it with the real particle capture; this keeps the OG tags valid from day one and needs no fonts)
 
 ```js
 // Slice-1 Open Graph image: the favicon "P" dot grid centred on 1200×630. Run: npm run og:placeholder
@@ -784,14 +784,14 @@ console.log('public/og.png written (1200x630)');
 Run: `npm run og:placeholder`
 Expected: `public/og.png written (1200x630)`.
 
-- [ ] **Step 11: Build and look at it**
+- [x] **Step 11: Build and look at it**
 
 Run: `npm run build && npm run preview`
 Expected: `tsc` silent; Vite reports `dist/index.html`, one JS chunk (a few KB), one CSS file; preview on `http://localhost:4173`.
 
 Browser verification with the Chrome DevTools MCP: `navigate_page` to `http://localhost:4173/`, `take_screenshot` at 1440×900 (desktop) and again after `resize_page` to 390×844 (phone). Check: name uppercase in Geist 900, one line on desktop, two lines on the phone; exit line bottom-left and clock bottom-right appear after about 2 s; clock shows the current Pacific time; `list_console_messages` returns nothing at error or warning level. Stop the preview server afterwards.
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add index.html src/styles.css src/content.ts src/main.ts src/ui/clock.ts src/ui/exitLine.ts public/_headers public/robots.txt public/favicon.svg public/og.png scripts/og-placeholder.mjs tests/clock.test.ts
@@ -811,7 +811,7 @@ Tasks 5–7 need two things only Parsa can create: a GitHub CLI login and a scop
 **Interfaces:**
 - Produces: `.env` with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`; `scripts/cf-api.mjs` exporting `env`, `requireEnv(...keys)`, `api(method, path, body?)`, `sleep(ms)` for Tasks 6, 7 and 23.
 
-- [ ] **Step 1: Write `docs/OPERATOR.md`**
+- [x] **Step 1: Write `docs/OPERATOR.md`**
 
 ```markdown
 # Operator steps (Parsa, one time each)
@@ -859,7 +859,7 @@ Dashboard → Workers & Pages → parsanaji-com → Metrics → Enable Web Analy
 Open https://parsanaji.com in Safari: tap to morph, drag to repel, no scroll bounce, clock correct.
 ```
 
-- [ ] **Step 2: Write `scripts/cf-api.mjs`** (shared by the Cloudflare scripts)
+- [x] **Step 2: Write `scripts/cf-api.mjs`** (shared by the Cloudflare scripts)
 
 ```js
 // Shared Cloudflare REST helper. Reads .env; exits with a clear message when a value is missing.
@@ -896,7 +896,7 @@ export async function api(method, path, body) {
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 ```
 
-- [ ] **Step 3: Write `scripts/cf-env.mjs`**
+- [x] **Step 3: Write `scripts/cf-env.mjs`**
 
 ```js
 // Verifies the Cloudflare API token and records the account + zone ids for parsanaji.com in .env.
@@ -925,17 +925,17 @@ console.log(`nameservers: ${zone.name_servers?.join(', ')}`);
 console.log('written to .env');
 ```
 
-- [ ] **Step 4: Check GitHub CLI**
+- [x] **Step 4: Check GitHub CLI**
 
 Run: `gh auth status 2>&1 || "/c/Program Files/GitHub CLI/gh.exe" auth status 2>&1`
 Expected: `Logged in to github.com account parsanaji`. If `gh` is missing or logged into another account: STOP, report "Operator step 1 (GitHub CLI) is missing", and wait.
 
-- [ ] **Step 5: Check the Cloudflare token and record ids**
+- [x] **Step 5: Check the Cloudflare token and record ids**
 
 Run: `test -f .env && node scripts/cf-env.mjs`
 Expected: `token status: active`, an account id, a zone id with `status active`, `written to .env`. If `.env` is missing or the token is rejected: STOP, report "Operator step 2 (Cloudflare API token) is missing or lacks Zone:Read on parsanaji.com", and wait.
 
-- [ ] **Step 6: Commit** (never `.env`)
+- [x] **Step 6: Commit** (never `.env`)
 
 ```bash
 git status --short   # confirm .env is NOT listed
@@ -955,7 +955,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: remote `origin` = `https://github.com/parsanaji/parsanaji.com` (private); repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; a workflow that tests, builds and deploys every push (production for `main`, preview for other branches).
 
-- [ ] **Step 1: Write `.github/workflows/deploy.yml`**
+- [x] **Step 1: Write `.github/workflows/deploy.yml`**
 
 ```yaml
 name: deploy
@@ -990,7 +990,7 @@ jobs:
           command: pages deploy dist --project-name=parsanaji-com --branch=${{ github.ref_name }} --commit-dirty=true
 ```
 
-- [ ] **Step 2: Commit, create the repository, push**
+- [x] **Step 2: Commit, create the repository, push**
 
 ```bash
 cd /c/Users/parsa/parsanaji.com
@@ -1004,7 +1004,7 @@ gh repo create parsanaji/parsanaji.com --private --source=. --remote=origin --pu
 
 Expected: `✓ Created repository parsanaji/parsanaji.com on GitHub` and `main` pushed. (The first workflow run fails at the deploy step because the Pages project does not exist yet; Task 6 fixes that.)
 
-- [ ] **Step 3: Set the repository secrets from `.env`**
+- [x] **Step 3: Set the repository secrets from `.env`**
 
 ```bash
 set -a; . ./.env; set +a
@@ -1026,7 +1026,7 @@ Expected: both secrets listed.
 **Interfaces:**
 - Produces: Pages project `parsanaji-com` (Direct Upload, production branch `main`), a production deployment serving `dist/`, custom domain `parsanaji.com` on Pages, proxied CNAMEs for the apex and `www` to `parsanaji-com.pages.dev`, a 301 `www → apex` Single Redirect at the zone (www is not a Pages custom domain), Always Use HTTPS on, email obfuscation off.
 
-- [ ] **Step 1: Create the project and deploy**
+- [x] **Step 1: Create the project and deploy**
 
 ```bash
 cd /c/Users/parsa/parsanaji.com
@@ -1039,7 +1039,7 @@ Expected: `✨ Successfully created the 'parsanaji-com' project.` then `✨ Depl
 
 `--force` is wrangler 4.151's opt-out from delegating a new Pages project to Workers (it does that when it detects an agent session, and in the attempt it edits `package.json`, `package-lock.json` and `vite.config.ts`). If those files show as modified afterwards: `git checkout -- package.json package-lock.json vite.config.ts && npm ci`. Only project creation needs `--force`; deploys do not.
 
-- [ ] **Step 2: Write `scripts/cf-setup-pages.mjs`** (idempotent; safe to rerun)
+- [x] **Step 2: Write `scripts/cf-setup-pages.mjs`** (idempotent; safe to rerun)
 
 ```js
 // Custom domains, DNS, www redirect and HTTPS for the Pages project. Run: node scripts/cf-setup-pages.mjs
@@ -1125,12 +1125,12 @@ for (const name of [APEX]) {
 }
 ```
 
-- [ ] **Step 3: Run it**
+- [x] **Step 3: Run it**
 
 Run: `node scripts/cf-setup-pages.mjs`
 Expected: `Pages domain parsanaji.com: added` (and `www.parsanaji.com: removed` if an earlier run added it), both CNAMEs `created`, redirect set, HTTPS on, `email_obfuscation: off`, and finally `parsanaji.com: active` (up to 5 minutes; rerun if the last line still says `pending`).
 
-- [ ] **Step 4: Verify from outside**
+- [x] **Step 4: Verify from outside**
 
 ```bash
 curl -sI https://parsanaji.com/ | head -12
@@ -1143,7 +1143,7 @@ Expected: first `HTTP/2 200` with the CSP header; second `HTTP/2 301` with `loca
 
 Browser verification: `navigate_page` to `https://parsanaji.com/`, `take_screenshot`; the static page renders in Geist (no fallback-font flash). `list_console_messages` must return zero messages at error or warning level of any kind (CSP violations, Permissions-Policy parse errors, font or asset failures) — this is the first time the production `_headers` are exercised in a browser, since `vite preview` ignores them. Repeat the same check at an emulated 390×844 in a fresh isolated page/context (never a reload of the same tab: Chrome logs "preloaded but not used" font warnings on cached reloads, which is a known quirk, not a site defect).
 
-- [ ] **Step 5: Commit, push, confirm the workflow is green**
+- [x] **Step 5: Commit, push, confirm the workflow is green**
 
 ```bash
 git add scripts/cf-setup-pages.mjs
@@ -1166,7 +1166,7 @@ Expected: the run completes with the deploy step green.
 **Interfaces:**
 - Produces: Email Routing enabled on the zone, destination `private-inbox@example.com` (verified by Parsa), rule `info@parsanaji.com → private-inbox@example.com`, catch-all disabled.
 
-- [ ] **Step 1: Write `scripts/cf-setup-email.mjs`** (idempotent; `--no-wait` exits instead of polling for the verification click)
+- [x] **Step 1: Write `scripts/cf-setup-email.mjs`** (idempotent; `--no-wait` exits instead of polling for the verification click)
 
 ```js
 // Email Routing: info@parsanaji.com -> private-inbox@example.com. Run: node scripts/cf-setup-email.mjs [--no-wait]
@@ -1232,19 +1232,19 @@ if (catchAll.enabled) {
 }
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `node scripts/cf-setup-email.mjs --no-wait`
 Expected: routing enabled, destination created (verification email sent). Report to the orchestrator: "Parsa: click the Cloudflare verification link in private-inbox@example.com." Rerun without `--no-wait` after the click (the rule is the only remaining step; it can also happen in a later slice).
 
 If `POST …/email/routing/enable` is rejected, fall back to one dashboard click (Email → Email Routing → Get started on the parsanaji.com zone) and rerun the script.
 
-- [ ] **Step 3: Verify the DNS Cloudflare added**
+- [x] **Step 3: Verify the DNS Cloudflare added**
 
 Run: `node -e "import('./scripts/cf-api.mjs').then(async ({api, env}) => { const r = await api('GET', '/zones/' + env.zoneId + '/dns_records?type=MX'); console.log(r.map(x => x.content)); })"`
 Expected: three `route*.mx.cloudflare.net` entries.
 
-- [ ] **Step 4: Commit and push**
+- [x] **Step 4: Commit and push**
 
 ```bash
 git add scripts/cf-setup-email.mjs
@@ -1263,7 +1263,7 @@ git push
 - Modify: `.github/workflows/deploy.yml` (hardening ruled in the Task 5 review), `docs/OPERATOR.md` (append section 6, CI token)
 - Orchestrator (not the builder): update `C:\Users\parsa\Documents\Obsidian Vault\Projects\parsanaji.com.md` (real deploy recipe, status "slice 1 live"), update `C:\Users\parsa\.claude\projects\C--Users-parsa\memory\parsanaji-com.md`, then compact.
 
-- [ ] **Step 1: Write `README.md`**
+- [x] **Step 1: Write `README.md`**
 
 ```markdown
 # parsanaji.com
@@ -1294,7 +1294,7 @@ any other branch → `https://<branch>.parsanaji-com.pages.dev`. From a terminal
     npm run fonts                    # regenerate the font subsets from scripts/fonts-src
 ```
 
-- [ ] **Step 1b: Harden the deploy workflow** (ruled in the Task 5 review: GitHub forces the Node 20 action majors onto Node 24 with a warning on every run; checkout v7.0.1, setup-node v7.1.0 and wrangler-action v4.1.3 all declare node24 and are drop-in here). Replace `.github/workflows/deploy.yml` with exactly:
+- [x] **Step 1b: Harden the deploy workflow** (ruled in the Task 5 review: GitHub forces the Node 20 action majors onto Node 24 with a warning on every run; checkout v7.0.1, setup-node v7.1.0 and wrangler-action v4.1.3 all declare node24 and are drop-in here). Replace `.github/workflows/deploy.yml` with exactly:
 
 ```yaml
 name: deploy
@@ -1334,7 +1334,7 @@ jobs:
 
 Changes versus Task 5: `timeout-minutes: 10`; `actions/checkout@v7` with `persist-credentials: false` (wrangler only runs local `git rev-parse`/`status`/`show`, which need no credentials); `actions/setup-node@v7`; `cloudflare/wrangler-action@v4` (same inputs; it still uses the repo's pinned `wrangler@4.151.0` from `node_modules`).
 
-- [ ] **Step 1c: Append the CI-token operator step to `docs/OPERATOR.md`** (ruled in the Task 5 review: the Actions secret currently holds the broad operator token, while the deploy step needs only Pages access). Append exactly:
+- [x] **Step 1c: Append the CI-token operator step to `docs/OPERATOR.md`** (ruled in the Task 5 review: the Actions secret currently holds the broad operator token, while the deploy step needs only Pages access). Append exactly:
 
 Also replace section 4 of `docs/OPERATOR.md` (found in Task 6: the Cloudflare Insights beacon is already injected by the zone-level Web Analytics, while the Pages project `web_analytics_tag` is null) with exactly:
 
@@ -1359,7 +1359,7 @@ Create, copy the token once, then in Git Bash (the token is read from a hidden p
 Verify: `gh run rerun <latest run id>` (or push any commit) and the deploy step stays green. `.env` keeps the broad token for the local scripts.
 ```
 
-- [ ] **Step 2: Commit and push**
+- [x] **Step 2: Commit and push**
 
 ```bash
 git add README.md .github/workflows/deploy.yml docs/OPERATOR.md
@@ -1373,7 +1373,7 @@ id=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId'); gh run wat
 
 Expected: the run is green on the new action majors with no Node-version warning annotations (`gh run view "$id" --json jobs --jq '.jobs[0].steps[] | .name + ": " + .conclusion'` shows every step `success`).
 
-- [ ] **Step 3: Orchestrator checkpoint**
+- [x] **Step 3: Orchestrator checkpoint**
 
 Update the vault note and memory file with: live URL confirmed, deploy recipe, email state (verified or waiting), any API surprises. Tell Parsa slice 1 is live. Compact before slice 2.
 
@@ -4601,7 +4601,8 @@ Then one more `lighthouse_audit` on `https://parsanaji.com/` (mobile): all four 
 ### Task 26: Documentation and closing checkpoint
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md` (append section 12), `README.md`
+- Modify: `docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md` (append section 12), `README.md`, `docs/OPERATOR.md`, `scripts/cf-setup-pages.mjs` (header comment only)
+- Also apply the deferred documentation minors recorded in the SDD ledger under "Task 8: minor (deferred to Task 26 docs pass)": README (`?debug` exists by then; `npm run fonts` is not an infrastructure script and needs no `.env`; "custom domains" → apex-only Pages domain + www zone redirect + email obfuscation off; `<branch>` is the Cloudflare-normalised alias), OPERATOR.md ("These five need you" → six; section 6 recipe `read -rsp ... && echo && printf ... | gh secret set ... -R parsanaji/parsanaji.com; unset CI_TOKEN`; rerun line with `-R` and the run-id lookup), and the stale header comment of `scripts/cf-setup-pages.mjs`.
 - Orchestrator: vault note `Projects/parsanaji.com.md`, memory `parsanaji-com.md`, dashboard line
 
 - [ ] **Step 1: Append "12. Shipped state" to the spec**
