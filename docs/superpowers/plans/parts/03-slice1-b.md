@@ -21,9 +21,9 @@ In PowerShell:
     winget install GitHub.cli
     gh auth login
 
-Pick GitHub.com, HTTPS, "Login with a web browser", and sign in as **parsanaji9-eng**.
-Verify: `gh auth status` shows `Logged in to github.com account parsanaji9-eng`.
-Git Bash may need a new window (or `"/c/Program Files/GitHub CLI/gh.exe"`) before `gh` is on PATH.
+Pick GitHub.com, HTTPS, "Login with a web browser", and sign in as **parsanaji**.
+Verify: `gh auth status` shows `Logged in to github.com account parsanaji`.
+Shells opened by a VS Code process that predates the install lack `gh` on PATH. Run `export PATH="$PATH:/c/Program Files/GitHub CLI"` (Git Bash) or `$env:Path += ";C:\Program Files\GitHub CLI"` (PowerShell) first, or restart VS Code.
 
 ## 2. Cloudflare API token
 Dashboard → My Profile → API Tokens → Create Token → Create Custom Token.
@@ -125,7 +125,7 @@ console.log('written to .env');
 - [ ] **Step 4: Check GitHub CLI**
 
 Run: `gh auth status 2>&1 || "/c/Program Files/GitHub CLI/gh.exe" auth status 2>&1`
-Expected: `Logged in to github.com account parsanaji9-eng`. If `gh` is missing or logged into another account: STOP, report "Operator step 1 (GitHub CLI) is missing", and wait.
+Expected: `Logged in to github.com account parsanaji`. If `gh` is missing or logged into another account: STOP, report "Operator step 1 (GitHub CLI) is missing", and wait.
 
 - [ ] **Step 5: Check the Cloudflare token and record ids**
 
@@ -150,7 +150,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Create: `.github/workflows/deploy.yml`
 
 **Interfaces:**
-- Produces: remote `origin` = `https://github.com/parsanaji9-eng/parsanaji.com` (private); repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; a workflow that tests, builds and deploys every push (production for `main`, preview for other branches).
+- Produces: remote `origin` = `https://github.com/parsanaji/parsanaji.com` (private); repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; a workflow that tests, builds and deploys every push (production for `main`, preview for other branches).
 
 - [ ] **Step 1: Write `.github/workflows/deploy.yml`**
 
@@ -195,15 +195,17 @@ git add .github/workflows/deploy.yml
 git commit -m "ci: test, build and deploy to Cloudflare Pages on push
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
-gh repo create parsanaji9-eng/parsanaji.com --private --source=. --remote=origin --push
+export PATH="$PATH:/c/Program Files/GitHub CLI"
+gh repo create parsanaji/parsanaji.com --private --source=. --remote=origin --push
 ```
 
-Expected: `✓ Created repository parsanaji9-eng/parsanaji.com on GitHub` and `main` pushed. (The first workflow run fails at the deploy step because the Pages project does not exist yet; Task 6 fixes that.)
+Expected: `✓ Created repository parsanaji/parsanaji.com on GitHub` and `main` pushed. (The first workflow run fails at the deploy step because the Pages project does not exist yet; Task 6 fixes that.)
 
 - [ ] **Step 3: Set the repository secrets from `.env`**
 
 ```bash
 set -a; . ./.env; set +a
+export PATH="$PATH:/c/Program Files/GitHub CLI"
 gh secret set CLOUDFLARE_API_TOKEN --body "$CLOUDFLARE_API_TOKEN"
 gh secret set CLOUDFLARE_ACCOUNT_ID --body "$CLOUDFLARE_ACCOUNT_ID"
 gh secret list

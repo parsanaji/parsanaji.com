@@ -185,7 +185,7 @@ All easing is non-linear. Default curve `easeOutExpo` for arrivals, `easeInCubic
 | Page title | `Parsa Naji` |
 | Meta description | `Building something new.` |
 | Hidden heading | `<h1>Parsa Naji</h1>` and `<p>Building something new.</p>` (visually hidden, available to assistive tech) |
-| `github` | `https://github.com/parsanaji9-eng` (update when the account is renamed) |
+| `github` | `https://github.com/parsanaji` (account renamed from `parsanaji9-eng` on 2026-10-16) |
 | `linkedin` | Hidden (`hidden` attribute) until Parsa supplies the URL; never shown as a dead link |
 | `say hi` | `mailto:info@parsanaji.com` |
 | Clock city | `IRVINE` (general area; Parsa lives in Rancho Santa Margarita) |
@@ -334,8 +334,8 @@ Pure TypeScript. `push(rawX, rawY, timestamp)` and `release(timestamp)` from DOM
 ### 7.1 Repository
 
 - Local: `C:\Users\parsa\parsanaji.com` (git initialized 2026-10-16, default branch `main`).
-- Remote: GitHub `parsanaji9-eng/parsanaji.com`; private is fine (Pages reads through the GitHub App).
-- `gh` CLI is **not installed on this PC** (absent from both Git Bash and PowerShell PATH; `winget` 1.29 is available). Install with `winget install GitHub.cli` and run `gh auth login` as `parsanaji9-eng`, or create the repo in the browser and push with a PAT. Confirm the active account before any `gh repo create` (vault gotcha: two accounts).
+- Remote: GitHub `parsanaji/parsanaji.com`; private is fine (Pages reads through the GitHub App).
+- `gh` 2.102.0 installed 2026-10-16 (`winget install GitHub.cli`) at `C:\Program Files\GitHub CLI\gh.exe`, logged in as `parsanaji` (keyring, HTTPS). Shells spawned by a VS Code process started before the install lack it on PATH: `export PATH="$PATH:/c/Program Files/GitHub CLI"` (Git Bash) or `$env:Path += ";C:\Program Files\GitHub CLI"` (PowerShell). Confirm the active account before any `gh repo create` (vault gotcha: two accounts).
 - Git global identity is unset on this PC; the repo sets `user.name` / `user.email` locally.
 
 ### 7.2 Cloudflare Pages
@@ -384,7 +384,7 @@ No inline scripts or styles in production, so the CSP needs no nonces or `'unsaf
 
 ### 7.6 Operator steps (Parsa, one time)
 
-1. **GitHub CLI.** In PowerShell: `winget install GitHub.cli`, then `gh auth login` (GitHub.com, HTTPS, browser) signed in as `parsanaji9-eng`. Verify with `gh auth status`.
+1. **GitHub CLI.** Done 2026-10-16: `winget install GitHub.cli`, `gh auth login` (GitHub.com, HTTPS, browser) signed in as `parsanaji`; `gh auth status` confirms.
 2. **Cloudflare API token.** Dashboard → My Profile → API Tokens → Create Token → Create Custom Token, named `parsanaji-com-deploy`, with exactly these permissions:
    - Account · Cloudflare Pages · Edit
    - Account · Email Routing Addresses · Edit
@@ -454,7 +454,7 @@ Each slice ends with tests green, a commit, and a Pages URL Parsa can open (prod
 | Input | Owner | Default until supplied |
 |---|---|---|
 | LinkedIn profile URL | Parsa | `linkedin` link hidden |
-| GitHub account rename | Parsa (later) | link points at `parsanaji9-eng` |
+| GitHub account rename | Done 2026-10-16 (`parsanaji9-eng` renamed to `parsanaji`) | link points at `parsanaji` |
 | Web Analytics | Parsa flips the dashboard toggle (7.5) or leaves it off | off until toggled |
 
 ---

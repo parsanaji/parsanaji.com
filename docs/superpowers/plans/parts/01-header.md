@@ -14,7 +14,7 @@
 
 - Repo: `C:\Users\parsa\parsanaji.com`, branch `main`, git identity already set locally (`Parsa Naji` / `238802691+parsanaji@users.noreply.github.com`). Shell for commands below is Git Bash (`/c/Users/parsa/parsanaji.com`). Commit after every task; end commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Exact dependency versions (install with `--save-exact`): `three@0.186.1`; dev: `vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 geist@1.7.2 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0`. TypeScript 7 is not used. No other runtime dependencies without a reason written in the commit.
-- Copy, verbatim: name `PARSA NAJI`; alt `soon.`; exit line `building something new · github · linkedin · say hi`; clock `IRVINE HH:MM PDT` (24-hour, `America/Los_Angeles`); title `Parsa Naji`; description `Building something new.`; email `info@parsanaji.com`; GitHub `https://github.com/parsanaji9-eng`; LinkedIn hidden until a URL exists.
+- Copy, verbatim: name `PARSA NAJI`; alt `soon.`; exit line `building something new · github · linkedin · say hi`; clock `IRVINE HH:MM PDT` (24-hour, `America/Los_Angeles`); title `Parsa Naji`; description `Building something new.`; email `info@parsanaji.com`; GitHub `https://github.com/parsanaji`; LinkedIn hidden until a URL exists.
 - Colors: background `#070707`, vignette center `#0e0e0e`, dots and text `#f5f5f5`, muted text `rgba(245,245,245,0.5)` (spec 3.2 said 0.45; raised to 0.5 so 12 px text clears the 4.5:1 contrast audit at about 4.95:1). Fonts: Geist Sans 900 (display), Geist Mono 400 (UI), self-hosted subsets under `public/fonts/`. No other colors, no gradients beyond the vignette, no icons.
 - No inline `<script>` (other than the JSON-LD data block) and no inline `<style>` or `style=""` attributes anywhere in `index.html`; the production CSP in `public/_headers` has no `'unsafe-inline'`. Set element styles only through the CSSOM (`el.style.translate = …`) from TypeScript.
 - Production bundle: no `lil-gui`, no source maps, total JS <= 180 KB gzip, fonts <= 40 KB total, one WebGL draw call, DPR capped at 2, `requestAnimationFrame` paused while the tab is hidden, zero console errors or warnings.
@@ -22,6 +22,7 @@
 - Coordinates: 1 world unit = 1 CSS px, origin at the viewport center, y up (spec 3.4). Pointer events convert with `x = clientX - vw / 2`, `y = vh / 2 - clientY`.
 - Unit tests run in Node with no DOM. Anything that needs a canvas, font, or WebGL is verified in the browser with the Chrome DevTools MCP tools (`mcp__plugin_ecc_chrome-devtools__*`) and recorded in the task's verification step.
 - Operator steps (spec 7.6) are Parsa's: GitHub CLI login, the Cloudflare API token in `.env`, the email verification click, the analytics toggle, the iPhone check. A task that needs one and finds it missing stops and reports; it does not improvise credentials.
+- GitHub CLI: `gh` 2.102.0 is installed at `C:\Program Files\GitHub CLI\gh.exe` and logged in as `parsanaji` (operator step 1 done 2026-10-16). Builder shells may not have it on PATH: start every command block that calls `gh` with `export PATH="$PATH:/c/Program Files/GitHub CLI"`. The GitHub handle is `parsanaji` (renamed from `parsanaji9-eng`).
 
 ## Review Focus
 

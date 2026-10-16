@@ -14,7 +14,7 @@
 
 - Repo: `C:\Users\parsa\parsanaji.com`, branch `main`, git identity already set locally (`Parsa Naji` / `238802691+parsanaji@users.noreply.github.com`). Shell for commands below is Git Bash (`/c/Users/parsa/parsanaji.com`). Commit after every task; end commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Exact dependency versions (install with `--save-exact`): `three@0.186.1`; dev: `vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 geist@1.7.2 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0`. TypeScript 7 is not used. No other runtime dependencies without a reason written in the commit.
-- Copy, verbatim: name `PARSA NAJI`; alt `soon.`; exit line `building something new · github · linkedin · say hi`; clock `IRVINE HH:MM PDT` (24-hour, `America/Los_Angeles`); title `Parsa Naji`; description `Building something new.`; email `info@parsanaji.com`; GitHub `https://github.com/parsanaji9-eng`; LinkedIn hidden until a URL exists.
+- Copy, verbatim: name `PARSA NAJI`; alt `soon.`; exit line `building something new · github · linkedin · say hi`; clock `IRVINE HH:MM PDT` (24-hour, `America/Los_Angeles`); title `Parsa Naji`; description `Building something new.`; email `info@parsanaji.com`; GitHub `https://github.com/parsanaji`; LinkedIn hidden until a URL exists.
 - Colors: background `#070707`, vignette center `#0e0e0e`, dots and text `#f5f5f5`, muted text `rgba(245,245,245,0.5)` (spec 3.2 said 0.45; raised to 0.5 so 12 px text clears the 4.5:1 contrast audit at about 4.95:1). Fonts: Geist Sans 900 (display), Geist Mono 400 (UI), self-hosted subsets under `public/fonts/`. No other colors, no gradients beyond the vignette, no icons.
 - No inline `<script>` (other than the JSON-LD data block) and no inline `<style>` or `style=""` attributes anywhere in `index.html`; the production CSP in `public/_headers` has no `'unsafe-inline'`. Set element styles only through the CSSOM (`el.style.translate = …`) from TypeScript.
 - Production bundle: no `lil-gui`, no source maps, total JS <= 180 KB gzip, fonts <= 40 KB total, one WebGL draw call, DPR capped at 2, `requestAnimationFrame` paused while the tab is hidden, zero console errors or warnings.
@@ -22,6 +22,7 @@
 - Coordinates: 1 world unit = 1 CSS px, origin at the viewport center, y up (spec 3.4). Pointer events convert with `x = clientX - vw / 2`, `y = vh / 2 - clientY`.
 - Unit tests run in Node with no DOM. Anything that needs a canvas, font, or WebGL is verified in the browser with the Chrome DevTools MCP tools (`mcp__plugin_ecc_chrome-devtools__*`) and recorded in the task's verification step.
 - Operator steps (spec 7.6) are Parsa's: GitHub CLI login, the Cloudflare API token in `.env`, the email verification click, the analytics toggle, the iPhone check. A task that needs one and finds it missing stops and reports; it does not improvise credentials.
+- GitHub CLI: `gh` 2.102.0 is installed at `C:\Program Files\GitHub CLI\gh.exe` and logged in as `parsanaji` (operator step 1 done 2026-10-16). Builder shells may not have it on PATH: start every command block that calls `gh` with `export PATH="$PATH:/c/Program Files/GitHub CLI"`. The GitHub handle is `parsanaji` (renamed from `parsanaji9-eng`).
 
 ## Review Focus
 
@@ -390,7 +391,7 @@ export const CONTENT = {
   name: 'PARSA NAJI',
   alt: 'soon.',
   links: {
-    github: 'https://github.com/parsanaji9-eng',
+    github: 'https://github.com/parsanaji',
     /** Leave empty until Parsa supplies the URL; the link stays hidden while empty. */
     linkedin: '',
     email: 'info@parsanaji.com',
@@ -443,7 +444,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
     <link rel="preload" href="/fonts/GeistMono-Regular.subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Person","name":"Parsa Naji","url":"https://parsanaji.com/","sameAs":["https://github.com/parsanaji9-eng"]}
+      {"@context":"https://schema.org","@type":"Person","name":"Parsa Naji","url":"https://parsanaji.com/","sameAs":["https://github.com/parsanaji"]}
     </script>
   </head>
   <body>
@@ -465,7 +466,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
       <p class="exit">
         <span>building something new</span>
         <span class="sep" aria-hidden="true">·</span>
-        <a href="https://github.com/parsanaji9-eng" rel="me noopener">github</a>
+        <a href="https://github.com/parsanaji" rel="me noopener">github</a>
         <span id="linkedin-sep" class="sep" aria-hidden="true" hidden>·</span>
         <a id="linkedin" href="#" rel="me noopener" hidden>linkedin</a>
         <span class="sep" aria-hidden="true">·</span>
@@ -803,9 +804,9 @@ In PowerShell:
     winget install GitHub.cli
     gh auth login
 
-Pick GitHub.com, HTTPS, "Login with a web browser", and sign in as **parsanaji9-eng**.
-Verify: `gh auth status` shows `Logged in to github.com account parsanaji9-eng`.
-Git Bash may need a new window (or `"/c/Program Files/GitHub CLI/gh.exe"`) before `gh` is on PATH.
+Pick GitHub.com, HTTPS, "Login with a web browser", and sign in as **parsanaji**.
+Verify: `gh auth status` shows `Logged in to github.com account parsanaji`.
+Shells opened by a VS Code process that predates the install lack `gh` on PATH. Run `export PATH="$PATH:/c/Program Files/GitHub CLI"` (Git Bash) or `$env:Path += ";C:\Program Files\GitHub CLI"` (PowerShell) first, or restart VS Code.
 
 ## 2. Cloudflare API token
 Dashboard → My Profile → API Tokens → Create Token → Create Custom Token.
@@ -907,7 +908,7 @@ console.log('written to .env');
 - [ ] **Step 4: Check GitHub CLI**
 
 Run: `gh auth status 2>&1 || "/c/Program Files/GitHub CLI/gh.exe" auth status 2>&1`
-Expected: `Logged in to github.com account parsanaji9-eng`. If `gh` is missing or logged into another account: STOP, report "Operator step 1 (GitHub CLI) is missing", and wait.
+Expected: `Logged in to github.com account parsanaji`. If `gh` is missing or logged into another account: STOP, report "Operator step 1 (GitHub CLI) is missing", and wait.
 
 - [ ] **Step 5: Check the Cloudflare token and record ids**
 
@@ -932,7 +933,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Create: `.github/workflows/deploy.yml`
 
 **Interfaces:**
-- Produces: remote `origin` = `https://github.com/parsanaji9-eng/parsanaji.com` (private); repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; a workflow that tests, builds and deploys every push (production for `main`, preview for other branches).
+- Produces: remote `origin` = `https://github.com/parsanaji/parsanaji.com` (private); repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; a workflow that tests, builds and deploys every push (production for `main`, preview for other branches).
 
 - [ ] **Step 1: Write `.github/workflows/deploy.yml`**
 
@@ -977,15 +978,17 @@ git add .github/workflows/deploy.yml
 git commit -m "ci: test, build and deploy to Cloudflare Pages on push
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
-gh repo create parsanaji9-eng/parsanaji.com --private --source=. --remote=origin --push
+export PATH="$PATH:/c/Program Files/GitHub CLI"
+gh repo create parsanaji/parsanaji.com --private --source=. --remote=origin --push
 ```
 
-Expected: `✓ Created repository parsanaji9-eng/parsanaji.com on GitHub` and `main` pushed. (The first workflow run fails at the deploy step because the Pages project does not exist yet; Task 6 fixes that.)
+Expected: `✓ Created repository parsanaji/parsanaji.com on GitHub` and `main` pushed. (The first workflow run fails at the deploy step because the Pages project does not exist yet; Task 6 fixes that.)
 
 - [ ] **Step 3: Set the repository secrets from `.env`**
 
 ```bash
 set -a; . ./.env; set +a
+export PATH="$PATH:/c/Program Files/GitHub CLI"
 gh secret set CLOUDFLARE_API_TOKEN --body "$CLOUDFLARE_API_TOKEN"
 gh secret set CLOUDFLARE_ACCOUNT_ID --body "$CLOUDFLARE_ACCOUNT_ID"
 gh secret list

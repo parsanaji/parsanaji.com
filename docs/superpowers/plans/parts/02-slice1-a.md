@@ -331,7 +331,7 @@ export const CONTENT = {
   name: 'PARSA NAJI',
   alt: 'soon.',
   links: {
-    github: 'https://github.com/parsanaji9-eng',
+    github: 'https://github.com/parsanaji',
     /** Leave empty until Parsa supplies the URL; the link stays hidden while empty. */
     linkedin: '',
     email: 'info@parsanaji.com',
@@ -384,7 +384,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
     <link rel="preload" href="/fonts/GeistMono-Regular.subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Person","name":"Parsa Naji","url":"https://parsanaji.com/","sameAs":["https://github.com/parsanaji9-eng"]}
+      {"@context":"https://schema.org","@type":"Person","name":"Parsa Naji","url":"https://parsanaji.com/","sameAs":["https://github.com/parsanaji"]}
     </script>
   </head>
   <body>
@@ -406,7 +406,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
       <p class="exit">
         <span>building something new</span>
         <span class="sep" aria-hidden="true">·</span>
-        <a href="https://github.com/parsanaji9-eng" rel="me noopener">github</a>
+        <a href="https://github.com/parsanaji" rel="me noopener">github</a>
         <span id="linkedin-sep" class="sep" aria-hidden="true" hidden>·</span>
         <a id="linkedin" href="#" rel="me noopener" hidden>linkedin</a>
         <span class="sep" aria-hidden="true">·</span>
