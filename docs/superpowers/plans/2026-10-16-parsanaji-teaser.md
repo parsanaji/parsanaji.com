@@ -1336,6 +1336,14 @@ Changes versus Task 5: `timeout-minutes: 10`; `actions/checkout@v7` with `persis
 
 - [ ] **Step 1c: Append the CI-token operator step to `docs/OPERATOR.md`** (ruled in the Task 5 review: the Actions secret currently holds the broad operator token, while the deploy step needs only Pages access). Append exactly:
 
+Also replace section 4 of `docs/OPERATOR.md` (found in Task 6: the Cloudflare Insights beacon is already injected by the zone-level Web Analytics, while the Pages project `web_analytics_tag` is null) with exactly:
+
+```markdown
+## 4. Web Analytics (already on)
+Zone-level Cloudflare Web Analytics is already injecting the cookieless beacon on parsanaji.com (checked in Task 6). Do not also enable the per-project toggle under Workers & Pages → parsanaji-com → Metrics; that could inject a second beacon. Dashboard → Analytics & Logs → Web Analytics shows the data.
+```
+
+
 ```markdown
 
 ## 6. CI token (recommended, after slice 1)
