@@ -809,7 +809,7 @@ Tasks 5–7 need two things only Parsa can create: a GitHub CLI login and a scop
 - Create: `docs/OPERATOR.md`, `scripts/cf-env.mjs`, `scripts/cf-api.mjs`
 
 **Interfaces:**
-- Produces: `.env` with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`; `scripts/cf-api.mjs` exporting `env`, `requireEnv(...keys)`, `api(method, path, body?)`, `sleep(ms)` for Tasks 6, 7 and 25.
+- Produces: `.env` with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`; `scripts/cf-api.mjs` exporting `env`, `requireEnv(...keys)`, `api(method, path, body?)`, `sleep(ms)` for Tasks 6, 7 and 23.
 
 - [ ] **Step 1: Write `docs/OPERATOR.md`**
 
