@@ -87,9 +87,9 @@ html.no-webgl #field { display: none; }
 
 .chrome {
   position: fixed;
-  left: var(--inset);
-  right: var(--inset);
-  bottom: var(--inset);
+  left: max(var(--inset), env(safe-area-inset-left, 0px));
+  right: max(var(--inset), env(safe-area-inset-right, 0px));
+  bottom: max(var(--inset), env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -101,6 +101,7 @@ html.no-webgl #field { display: none; }
   animation: chrome-in 600ms ease 2000ms both;
 }
 .chrome[hidden] { display: none; }
+.chrome:focus-within { animation-delay: 0ms; animation-duration: 0ms; } /* a keyboard user must never land on an invisible link during the fade; `animation: none` would restart the fade on blur */
 @keyframes chrome-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -131,7 +132,7 @@ html.no-webgl #field { display: none; }
   outline-offset: 4px;
 }
 .exit [hidden], .clock [hidden] { display: none; }
-.clock[hidden] { display: none; } /* no JavaScript, no clock (spec 5); main.ts un-hides it */
+.clock[hidden] { visibility: hidden; } /* no JavaScript, no clock (spec 5); main.ts un-hides it. visibility keeps the row, so the exit line never jumps when the clock appears */
 .clock time { font-variant-numeric: tabular-nums; }
 
 /* Narrow viewports: one row cannot hold the exit line and the clock, so the chrome stacks
