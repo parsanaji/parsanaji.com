@@ -404,7 +404,7 @@ export function initCursorRing(el: HTMLElement, root: HTMLElement = document.doc
 }
 ```
 
-- [ ] **Step 2: Call it from `src/main.ts`** — add `import { initCursorRing } from './ui/cursor';` and, right after the `startClock(...)` line inside `boot()`:
+- [ ] **Step 2: Call it from `src/main.ts`** — add `import { initCursorRing } from './ui/cursor';` and, right after the clock block (the line `clockEl.hidden = false;`) inside `boot()`:
 
 ```ts
   const cursorEl = document.getElementById('cursor');

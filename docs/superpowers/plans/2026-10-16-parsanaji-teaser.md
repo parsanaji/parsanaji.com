@@ -468,7 +468,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
 
     <footer id="chrome" class="chrome">
       <p class="exit">
-        <span>building something new</span>
+        <span class="tagline">building something new</span>
         <span class="sep" aria-hidden="true">·</span>
         <a href="https://github.com/parsanaji" rel="me noopener">github</a>
         <span id="linkedin-sep" class="sep" aria-hidden="true" hidden>·</span>
@@ -476,7 +476,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
         <span class="sep" aria-hidden="true">·</span>
         <a href="mailto:info@parsanaji.com">say hi</a>
       </p>
-      <p class="clock" aria-label="Local time in Irvine, California">
+      <p id="clock" class="clock" aria-label="Local time in Irvine, California" hidden>
         <span>IRVINE</span>
         <time id="clock-time">--:--</time>
         <span id="clock-zone">PT</span>
@@ -625,7 +625,18 @@ html.no-webgl #field { display: none; }
   outline-offset: 4px;
 }
 .exit [hidden], .clock [hidden] { display: none; }
+.clock[hidden] { display: none; } /* no JavaScript, no clock (spec 5); main.ts un-hides it */
 .clock time { font-variant-numeric: tabular-nums; }
+
+/* Narrow viewports: one row cannot hold the exit line and the clock, so the chrome stacks
+   (tagline, then the links, then the clock right-aligned) and nothing is clipped. */
+@media (max-width: 679px) {
+  .chrome { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .exit { flex-wrap: wrap; row-gap: 6px; }
+  .exit .tagline { flex-basis: 100%; }
+  .exit .tagline + .sep { display: none; }
+  .clock { align-self: flex-end; }
+}
 
 html.has-ring body { cursor: none; }
 html.has-ring .exit a { cursor: pointer; }
@@ -674,7 +685,11 @@ function boot(): void {
   initExitLine(CONTENT.links.linkedin);
   const timeEl = document.getElementById('clock-time');
   const zoneEl = document.getElementById('clock-zone');
-  if (timeEl && zoneEl) startClock(timeEl, zoneEl, CONTENT.clock.timeZone);
+  const clockEl = document.getElementById('clock');
+  if (timeEl && zoneEl && clockEl) {
+    startClock(timeEl, zoneEl, CONTENT.clock.timeZone);
+    clockEl.hidden = false; // no JavaScript, no clock (spec 5)
+  }
   // Slice 1: the particle engine does not exist yet; always show the typographic page.
   showStatic();
 }
@@ -3148,7 +3163,11 @@ async function boot(): Promise<void> {
   initExitLine(CONTENT.links.linkedin);
   const timeEl = document.getElementById('clock-time');
   const zoneEl = document.getElementById('clock-zone');
-  if (timeEl && zoneEl) startClock(timeEl, zoneEl, CONTENT.clock.timeZone);
+  const clockEl = document.getElementById('clock');
+  if (timeEl && zoneEl && clockEl) {
+    startClock(timeEl, zoneEl, CONTENT.clock.timeZone);
+    clockEl.hidden = false; // no JavaScript, no clock (spec 5)
+  }
 
   const query = new URLSearchParams(location.search);
   const canvas = document.getElementById('field');
@@ -3743,7 +3762,7 @@ export function initCursorRing(el: HTMLElement, root: HTMLElement = document.doc
 }
 ```
 
-- [ ] **Step 2: Call it from `src/main.ts`** — add `import { initCursorRing } from './ui/cursor';` and, right after the `startClock(...)` line inside `boot()`:
+- [ ] **Step 2: Call it from `src/main.ts`** — add `import { initCursorRing } from './ui/cursor';` and, right after the clock block (the line `clockEl.hidden = false;`) inside `boot()`:
 
 ```ts
   const cursorEl = document.getElementById('cursor');

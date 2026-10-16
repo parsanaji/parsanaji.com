@@ -867,7 +867,11 @@ async function boot(): Promise<void> {
   initExitLine(CONTENT.links.linkedin);
   const timeEl = document.getElementById('clock-time');
   const zoneEl = document.getElementById('clock-zone');
-  if (timeEl && zoneEl) startClock(timeEl, zoneEl, CONTENT.clock.timeZone);
+  const clockEl = document.getElementById('clock');
+  if (timeEl && zoneEl && clockEl) {
+    startClock(timeEl, zoneEl, CONTENT.clock.timeZone);
+    clockEl.hidden = false; // no JavaScript, no clock (spec 5)
+  }
 
   const query = new URLSearchParams(location.search);
   const canvas = document.getElementById('field');

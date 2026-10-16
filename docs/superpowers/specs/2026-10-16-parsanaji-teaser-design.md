@@ -79,6 +79,7 @@ The page has two decision moments: stay vs. bounce in the first two seconds, and
 - Name centered at the viewport center on both axes.
 - Exit line anchored bottom-left with a 24 px inset on desktop and 16 px on phones.
 - Clock anchored bottom-right with the same insets.
+- Below 680 px of viewport width one row cannot hold both, so the chrome stacks: the tagline, then the links row, then the clock right-aligned on its own row. Nothing is ever clipped, and the LinkedIn link fits when it appears. (Ruled during the Task 3 review, 2026-10-16: the first build clipped the clock to `IRV` at 390 px.)
 - Nothing else on screen.
 
 ### 3.2 Look
