@@ -221,18 +221,20 @@ Expected: both secrets listed.
 - Create: `scripts/cf-setup-pages.mjs`
 
 **Interfaces:**
-- Produces: Pages project `parsanaji-com` (Direct Upload, production branch `main`), a production deployment serving `dist/`, custom domains `parsanaji.com` + `www.parsanaji.com`, proxied CNAMEs to `parsanaji-com.pages.dev`, a 301 `www → apex` Single Redirect, Always Use HTTPS on.
+- Produces: Pages project `parsanaji-com` (Direct Upload, production branch `main`), a production deployment serving `dist/`, custom domain `parsanaji.com` on Pages, proxied CNAMEs for the apex and `www` to `parsanaji-com.pages.dev`, a 301 `www → apex` Single Redirect at the zone (www is not a Pages custom domain), Always Use HTTPS on, email obfuscation off.
 
 - [ ] **Step 1: Create the project and deploy**
 
 ```bash
 cd /c/Users/parsa/parsanaji.com
 set -a; . ./.env; set +a
-npx wrangler pages project create parsanaji-com --production-branch main
+npx wrangler pages project create parsanaji-com --production-branch main --force
 npm run deploy
 ```
 
 Expected: `✨ Successfully created the 'parsanaji-com' project.` then `✨ Deployment complete! Take a peek over at https://<hash>.parsanaji-com.pages.dev`. Verify: `curl -sI https://parsanaji-com.pages.dev/ | head -20` shows `HTTP/2 200`, a `content-security-policy:` header starting `default-src 'self'`, and `cache-control: no-cache`.
+
+`--force` is wrangler 4.151's opt-out from delegating a new Pages project to Workers (it does that when it detects an agent session, and in the attempt it edits `package.json`, `package-lock.json` and `vite.config.ts`). If those files show as modified afterwards: `git checkout -- package.json package-lock.json vite.config.ts && npm ci`. Only project creation needs `--force`; deploys do not.
 
 - [ ] **Step 2: Write `scripts/cf-setup-pages.mjs`** (idempotent; safe to rerun)
 
@@ -246,15 +248,19 @@ const APEX = 'parsanaji.com';
 const WWW = 'www.parsanaji.com';
 const PAGES_HOST = `${PROJECT}.pages.dev`;
 
-// 1. custom domains on the Pages project
+// 1. custom domain on the Pages project: the apex only. www is handled at the zone edge
+//    (proxied CNAME + Single Redirect). A www Pages domain never validates because the
+//    redirect rule also catches Cloudflare's http validation path (found in Task 6).
 const domains = await api('GET', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains`);
-for (const name of [APEX, WWW]) {
-  if (domains.some((d) => d.name === name)) {
-    console.log(`Pages domain ${name}: already present`);
-  } else {
-    await api('POST', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains`, { name });
-    console.log(`Pages domain ${name}: added`);
-  }
+if (domains.some((d) => d.name === APEX)) {
+  console.log(`Pages domain ${APEX}: already present`);
+} else {
+  await api('POST', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains`, { name: APEX });
+  console.log(`Pages domain ${APEX}: added`);
+}
+if (domains.some((d) => d.name === WWW)) {
+  await api('DELETE', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains/${WWW}`);
+  console.log(`Pages domain ${WWW}: removed (www is a zone-level redirect)`);
 }
 
 // 2. DNS: proxied CNAMEs to the pages.dev host (Cloudflare flattens the apex CNAME)
@@ -298,8 +304,13 @@ console.log('redirect rule: www -> apex set');
 await api('PATCH', `/zones/${env.zoneId}/settings/always_use_https`, { value: 'on' });
 console.log('always_use_https: on');
 
-// 5. wait for the Pages domains to validate (certificate issuance can take a few minutes)
-for (const name of [APEX, WWW]) {
+// 4b. Scrape Shield off: email obfuscation would rewrite mailto:info@parsanaji.com into a
+//     /cdn-cgi/l/email-protection link and inject a script (spec: plain mailto, strict CSP).
+await api('PATCH', `/zones/${env.zoneId}/settings/email_obfuscation`, { value: 'off' });
+console.log('email_obfuscation: off');
+
+// 5. wait for the apex Pages domain to validate (certificate issuance can take a few minutes)
+for (const name of [APEX]) {
   let status = 'unknown';
   for (let i = 0; i < 30; i++) {
     const d = await api('GET', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains/${name}`);
@@ -314,7 +325,7 @@ for (const name of [APEX, WWW]) {
 - [ ] **Step 3: Run it**
 
 Run: `node scripts/cf-setup-pages.mjs`
-Expected: both domains `added`, both CNAMEs `created`, redirect set, HTTPS on, and finally `parsanaji.com: active` and `www.parsanaji.com: active` (up to 5 minutes; rerun if the last lines still say `pending`).
+Expected: `Pages domain parsanaji.com: added` (and `www.parsanaji.com: removed` if an earlier run added it), both CNAMEs `created`, redirect set, HTTPS on, `email_obfuscation: off`, and finally `parsanaji.com: active` (up to 5 minutes; rerun if the last line still says `pending`).
 
 - [ ] **Step 4: Verify from outside**
 
