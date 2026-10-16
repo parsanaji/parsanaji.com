@@ -5,6 +5,7 @@
 **Files:**
 - Create: `package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `.gitignore`, `.env.example`, `src/vite-env.d.ts`
 - Test: `tests/env.test.ts`
+- Create (added by the fix round 1 ruling): `scripts/fonts-src/Geist-Black.woff2`, `scripts/fonts-src/GeistMono-Regular.woff2`, `scripts/fonts-src/LICENSE.txt` copied from the geist@1.7.2 package; `geist` itself is not installed (it peer-requires Next.js).
 
 **Interfaces:**
 - Produces: npm scripts `dev`, `build`, `preview`, `test`, `test:watch`, `typecheck`, `fonts`, `og:placeholder`, `og`, `deploy`, `deploy:preview` used by every later task.
@@ -15,7 +16,7 @@
 cd /c/Users/parsa/parsanaji.com
 npm init -y >/dev/null
 npm install --save-exact three@0.186.1
-npm install --save-exact --save-dev vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 geist@1.7.2 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0
+npm install --save-exact --save-dev vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0
 ```
 
 Expected: `package-lock.json` created; `node_modules/three/package.json` shows `"version": "0.186.1"`; `@types/node` resolved to the newest 22.x (the tests reference `process`, and `tsc` needs its types).
@@ -167,6 +168,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `scripts/subset-fonts.mjs`
+- Consumes: `scripts/fonts-src/Geist-Black.woff2`, `scripts/fonts-src/GeistMono-Regular.woff2`, `scripts/fonts-src/LICENSE.txt` (vendored in Task 1 from geist@1.7.2 after a review ruling; the `geist` npm package is not a dependency because it peer-requires Next.js. Refresh later with `npm pack geist@<version>` and copy from the tarball `package/dist/fonts/`.)
 - Create (generated, committed): `public/fonts/GeistSans-Black.subset.woff2`, `public/fonts/GeistMono-Regular.subset.woff2`
 
 **Interfaces:**
@@ -175,13 +177,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Write `scripts/subset-fonts.mjs`**
 
 ```js
-// Generates the two self-hosted font subsets from the `geist` npm package.
+// Generates the two self-hosted font subsets from the vendored Geist sources in scripts/fonts-src/ (SIL OFL 1.1).
 // Run: node scripts/subset-fonts.mjs   (also: npm run fonts)
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import subsetFont from 'subset-font';
 
-const geistRoot = path.resolve('node_modules/geist');
+const srcDir = path.resolve('scripts/fonts-src');
 const outDir = path.resolve('public/fonts');
 
 const ASCII = Array.from({ length: 0x7e - 0x20 + 1 }, (_, i) => String.fromCharCode(0x20 + i)).join('');
@@ -189,14 +191,14 @@ const DISPLAY_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ';
 const MONO_CHARS = `${ASCII}·`;
 
 const jobs = [
-  { src: 'dist/fonts/geist-sans/Geist-Black.woff2', out: 'GeistSans-Black.subset.woff2', text: DISPLAY_CHARS },
-  { src: 'dist/fonts/geist-mono/GeistMono-Regular.woff2', out: 'GeistMono-Regular.subset.woff2', text: MONO_CHARS },
+  { src: 'Geist-Black.woff2', out: 'GeistSans-Black.subset.woff2', text: DISPLAY_CHARS },
+  { src: 'GeistMono-Regular.woff2', out: 'GeistMono-Regular.subset.woff2', text: MONO_CHARS },
 ];
 
 await mkdir(outDir, { recursive: true });
 let total = 0;
 for (const job of jobs) {
-  const input = await readFile(path.join(geistRoot, job.src));
+  const input = await readFile(path.join(srcDir, job.src));
   const output = await subsetFont(input, job.text, { targetFormat: 'woff2' });
   const outPath = path.join(outDir, job.out);
   await writeFile(outPath, output);
@@ -214,7 +216,7 @@ if (total > 40 * 1024) {
 - [ ] **Step 2: Run it**
 
 Run: `npm run fonts`
-Expected: two files written, each well under 20 KB, `total:` under 40 KB, exit 0. If `subset-font` rejects the `.woff2` input, switch both `src` paths to the sibling `.ttf` files (`Geist-Black.ttf`, `GeistMono-Regular.ttf`, same folders) and rerun.
+Expected: two files written, each well under 20 KB, `total:` under 40 KB, exit 0. If `subset-font` rejects the `.woff2` input, fetch the `.ttf` siblings without installing the package: run `npm pack geist@1.7.2`, extract `package/dist/fonts/geist-sans/Geist-Black.ttf` and `package/dist/fonts/geist-mono/GeistMono-Regular.ttf` into `scripts/fonts-src/`, point both `src` names at them, delete the tarball, and rerun.
 
 - [ ] **Step 3: Confirm the files exist**
 

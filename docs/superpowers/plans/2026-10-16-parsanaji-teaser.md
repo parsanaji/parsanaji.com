@@ -6,14 +6,14 @@
 
 **Architecture:** A Vite + vanilla TypeScript site with no UI framework. A canvas sampler turns text into exactly `N` points; a Three.js `Points` object with a custom GLSL3 vertex shader does every motion (entry convergence, simplex vibration, breath, ripple, pointer repel with a decaying trail, phase-based morph) on the GPU in one draw call, while pure, unit-tested TypeScript modules (`MorphMachine`, `PointerModel`, `RippleScheduler`, `FpsProbe`, sampler math) decide what the uniforms say each frame. Infrastructure is scripted against the Cloudflare REST API and wrangler; GitHub Actions deploys on every push.
 
-**Tech Stack:** Vite 8.3.4, TypeScript 5.9.3, three 0.186.1 + @types/three 0.186.0, Vitest 5.0.5, lil-gui 0.21.0 (dev), geist 1.7.2 + subset-font 2.9.0 (dev, fonts), sharp 0.35.5 (dev, images), wrangler 4.151.0 (dev), Cloudflare Pages + DNS + Email Routing, GitHub Actions. Node 24.19 locally, Node 22 in CI.
+**Tech Stack:** Vite 8.3.4, TypeScript 5.9.3, three 0.186.1 + @types/three 0.186.0, Vitest 5.0.5, lil-gui 0.21.0 (dev), subset-font 2.9.0 (dev, fonts; Geist Black and Geist Mono Regular source woff2 files vendored under scripts/fonts-src/ from geist@1.7.2, SIL OFL 1.1), sharp 0.35.5 (dev, images), wrangler 4.151.0 (dev), Cloudflare Pages + DNS + Email Routing, GitHub Actions. Node 24.19 locally, Node 22 in CI.
 
 **Spec:** `docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md` (read it first; this plan argues from it and uses its section numbers).
 
 ## Global Constraints
 
 - Repo: `C:\Users\parsa\parsanaji.com`, branch `main`, git identity already set locally (`Parsa Naji` / `238802691+parsanaji@users.noreply.github.com`). Shell for commands below is Git Bash (`/c/Users/parsa/parsanaji.com`). Commit after every task; end commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- Exact dependency versions (install with `--save-exact`): `three@0.186.1`; dev: `vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 geist@1.7.2 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0`. TypeScript 7 is not used. No other runtime dependencies without a reason written in the commit.
+- Exact dependency versions (install with `--save-exact`): `three@0.186.1`; dev: `vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0`. TypeScript 7 is not used. No other runtime dependencies without a reason written in the commit.
 - Copy, verbatim: name `PARSA NAJI`; alt `soon.`; exit line `building something new · github · linkedin · say hi`; clock `IRVINE HH:MM PDT` (24-hour, `America/Los_Angeles`); title `Parsa Naji`; description `Building something new.`; email `info@parsanaji.com`; GitHub `https://github.com/parsanaji`; LinkedIn hidden until a URL exists.
 - Colors: background `#070707`, vignette center `#0e0e0e`, dots and text `#f5f5f5`, muted text `rgba(245,245,245,0.5)` (spec 3.2 said 0.45; raised to 0.5 so 12 px text clears the 4.5:1 contrast audit at about 4.95:1). Fonts: Geist Sans 900 (display), Geist Mono 400 (UI), self-hosted subsets under `public/fonts/`. No other colors, no gradients beyond the vignette, no icons.
 - No inline `<script>` (other than the JSON-LD data block) and no inline `<style>` or `style=""` attributes anywhere in `index.html`; the production CSP in `public/_headers` has no `'unsafe-inline'`. Set element styles only through the CSSOM (`el.style.translate = …`) from TypeScript.
@@ -65,6 +65,7 @@ See spec 4.2 for the full tree. Responsibilities, one line each:
 **Files:**
 - Create: `package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `.gitignore`, `.env.example`, `src/vite-env.d.ts`
 - Test: `tests/env.test.ts`
+- Create (added by the fix round 1 ruling): `scripts/fonts-src/Geist-Black.woff2`, `scripts/fonts-src/GeistMono-Regular.woff2`, `scripts/fonts-src/LICENSE.txt` copied from the geist@1.7.2 package; `geist` itself is not installed (it peer-requires Next.js).
 
 **Interfaces:**
 - Produces: npm scripts `dev`, `build`, `preview`, `test`, `test:watch`, `typecheck`, `fonts`, `og:placeholder`, `og`, `deploy`, `deploy:preview` used by every later task.
@@ -75,7 +76,7 @@ See spec 4.2 for the full tree. Responsibilities, one line each:
 cd /c/Users/parsa/parsanaji.com
 npm init -y >/dev/null
 npm install --save-exact three@0.186.1
-npm install --save-exact --save-dev vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 geist@1.7.2 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0
+npm install --save-exact --save-dev vite@8.3.4 typescript@5.9.3 @types/three@0.186.0 @types/node@22 vitest@5.0.5 lil-gui@0.21.0 subset-font@2.9.0 sharp@0.35.5 wrangler@4.151.0
 ```
 
 Expected: `package-lock.json` created; `node_modules/three/package.json` shows `"version": "0.186.1"`; `@types/node` resolved to the newest 22.x (the tests reference `process`, and `tsc` needs its types).
@@ -227,6 +228,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `scripts/subset-fonts.mjs`
+- Consumes: `scripts/fonts-src/Geist-Black.woff2`, `scripts/fonts-src/GeistMono-Regular.woff2`, `scripts/fonts-src/LICENSE.txt` (vendored in Task 1 from geist@1.7.2 after a review ruling; the `geist` npm package is not a dependency because it peer-requires Next.js. Refresh later with `npm pack geist@<version>` and copy from the tarball `package/dist/fonts/`.)
 - Create (generated, committed): `public/fonts/GeistSans-Black.subset.woff2`, `public/fonts/GeistMono-Regular.subset.woff2`
 
 **Interfaces:**
@@ -235,13 +237,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Write `scripts/subset-fonts.mjs`**
 
 ```js
-// Generates the two self-hosted font subsets from the `geist` npm package.
+// Generates the two self-hosted font subsets from the vendored Geist sources in scripts/fonts-src/ (SIL OFL 1.1).
 // Run: node scripts/subset-fonts.mjs   (also: npm run fonts)
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import subsetFont from 'subset-font';
 
-const geistRoot = path.resolve('node_modules/geist');
+const srcDir = path.resolve('scripts/fonts-src');
 const outDir = path.resolve('public/fonts');
 
 const ASCII = Array.from({ length: 0x7e - 0x20 + 1 }, (_, i) => String.fromCharCode(0x20 + i)).join('');
@@ -249,14 +251,14 @@ const DISPLAY_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ';
 const MONO_CHARS = `${ASCII}·`;
 
 const jobs = [
-  { src: 'dist/fonts/geist-sans/Geist-Black.woff2', out: 'GeistSans-Black.subset.woff2', text: DISPLAY_CHARS },
-  { src: 'dist/fonts/geist-mono/GeistMono-Regular.woff2', out: 'GeistMono-Regular.subset.woff2', text: MONO_CHARS },
+  { src: 'Geist-Black.woff2', out: 'GeistSans-Black.subset.woff2', text: DISPLAY_CHARS },
+  { src: 'GeistMono-Regular.woff2', out: 'GeistMono-Regular.subset.woff2', text: MONO_CHARS },
 ];
 
 await mkdir(outDir, { recursive: true });
 let total = 0;
 for (const job of jobs) {
-  const input = await readFile(path.join(geistRoot, job.src));
+  const input = await readFile(path.join(srcDir, job.src));
   const output = await subsetFont(input, job.text, { targetFormat: 'woff2' });
   const outPath = path.join(outDir, job.out);
   await writeFile(outPath, output);
@@ -274,7 +276,7 @@ if (total > 40 * 1024) {
 - [ ] **Step 2: Run it**
 
 Run: `npm run fonts`
-Expected: two files written, each well under 20 KB, `total:` under 40 KB, exit 0. If `subset-font` rejects the `.woff2` input, switch both `src` paths to the sibling `.ttf` files (`Geist-Black.ttf`, `GeistMono-Regular.ttf`, same folders) and rerun.
+Expected: two files written, each well under 20 KB, `total:` under 40 KB, exit 0. If `subset-font` rejects the `.woff2` input, fetch the `.ttf` siblings without installing the package: run `npm pack geist@1.7.2`, extract `package/dist/fonts/geist-sans/Geist-Black.ttf` and `package/dist/fonts/geist-mono/GeistMono-Regular.ttf` into `scripts/fonts-src/`, point both `src` names at them, delete the tarball, and rerun.
 
 - [ ] **Step 3: Confirm the files exist**
 
@@ -1259,7 +1261,7 @@ any other branch → `https://<branch>.parsanaji-com.pages.dev`. From a terminal
     node scripts/cf-env.mjs          # verify token, record account + zone ids
     node scripts/cf-setup-pages.mjs  # custom domains, DNS, www redirect, HTTPS
     node scripts/cf-setup-email.mjs  # info@parsanaji.com -> private-inbox@example.com
-    npm run fonts                    # regenerate the font subsets from node_modules/geist
+    npm run fonts                    # regenerate the font subsets from scripts/fonts-src
 ```
 
 - [ ] **Step 2: Commit and push**

@@ -199,7 +199,7 @@ All easing is non-linear. Default curve `easeOutExpo` for arrivals, `easeInCubic
 - Vite 8 (8.3.x, Rolldown-based), vanilla TypeScript 5.9 (strict; TypeScript 7 is deliberately not used yet), `three` 0.186 with `@types/three` 0.186, `@types/node` 22 for the test files, no UI framework. GLSL files are imported as strings with Vite's built-in `?raw` suffix; no GLSL plugin.
 - `lil-gui` 0.21 as a dev-only dependency for the debug panel (loaded through a dynamic import guarded by `import.meta.env.DEV`, so it is absent from production bundles).
 - Vitest 5 for unit tests (Node environment, no DOM).
-- `geist` 1.7 (npm package carrying the Geist font files) and `subset-font` 2.9 (pure-JS HarfBuzz subsetter; Python is not installed on this PC, so no fonttools) as dev dependencies; the generated subset `.woff2` files are committed under `public/fonts/`.
+- Geist Black and Geist Mono Regular source `.woff2` files vendored under `scripts/fonts-src/` (copied from the `geist` 1.7.2 npm package together with its SIL OFL 1.1 license; the package itself is not a dependency because it peer-requires Next.js, which pulled about 325 MB into node_modules — ruled during the Task 1 review on 2026-10-16) and `subset-font` 2.9 (pure-JS HarfBuzz subsetter; Python is not installed on this PC, so no fonttools) as a dev dependency; the generated subset `.woff2` files are committed under `public/fonts/`.
 - `wrangler` 4 as a dev dependency for Cloudflare Pages deploys; `sharp` as a dev dependency for the OG image downscale.
 - Node 24 locally (installed: v24.19.0, npm 11.17.0). GitHub Actions uses Node 22 (Vite 8 requires `^20.19.0 || >=22.12.0`). The code uses no Node-24-only APIs.
 - Package manager: npm, with `package-lock.json` committed.
@@ -217,7 +217,8 @@ C:\Users\parsa\parsanaji.com\
 │   ├── robots.txt
 │   └── _headers                  Cloudflare Pages headers (section 7)
 ├── scripts/
-│   ├── subset-fonts.mjs          geist npm package → subset woff2 files (subset-font)
+│   ├── subset-fonts.mjs          scripts/fonts-src/*.woff2 → subset woff2 files (subset-font)
+│   ├── fonts-src/                vendored Geist Black + Geist Mono Regular .woff2 sources + SIL OFL 1.1 LICENSE.txt (geist is not an npm dependency)
 │   ├── og-placeholder.mjs        slice-1 OG image from SVG shapes (sharp)
 │   ├── og-image.mjs              slice-5 OG image: downscale the engine capture (sharp)
 │   ├── cf-env.mjs                verifies the API token, writes account/zone ids into .env

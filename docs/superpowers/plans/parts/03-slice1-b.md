@@ -476,7 +476,7 @@ any other branch → `https://<branch>.parsanaji-com.pages.dev`. From a terminal
     node scripts/cf-env.mjs          # verify token, record account + zone ids
     node scripts/cf-setup-pages.mjs  # custom domains, DNS, www redirect, HTTPS
     node scripts/cf-setup-email.mjs  # info@parsanaji.com -> private-inbox@example.com
-    npm run fonts                    # regenerate the font subsets from node_modules/geist
+    npm run fonts                    # regenerate the font subsets from scripts/fonts-src
 ```
 
 - [ ] **Step 2: Commit and push**
