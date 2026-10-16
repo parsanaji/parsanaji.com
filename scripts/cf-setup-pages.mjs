@@ -7,15 +7,19 @@ const APEX = 'parsanaji.com';
 const WWW = 'www.parsanaji.com';
 const PAGES_HOST = `${PROJECT}.pages.dev`;
 
-// 1. custom domains on the Pages project
+// 1. custom domain on the Pages project: the apex only. www is handled at the zone edge
+//    (proxied CNAME + Single Redirect). A www Pages domain never validates because the
+//    redirect rule also catches Cloudflare's http validation path (found in Task 6).
 const domains = await api('GET', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains`);
-for (const name of [APEX, WWW]) {
-  if (domains.some((d) => d.name === name)) {
-    console.log(`Pages domain ${name}: already present`);
-  } else {
-    await api('POST', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains`, { name });
-    console.log(`Pages domain ${name}: added`);
-  }
+if (domains.some((d) => d.name === APEX)) {
+  console.log(`Pages domain ${APEX}: already present`);
+} else {
+  await api('POST', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains`, { name: APEX });
+  console.log(`Pages domain ${APEX}: added`);
+}
+if (domains.some((d) => d.name === WWW)) {
+  await api('DELETE', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains/${WWW}`);
+  console.log(`Pages domain ${WWW}: removed (www is a zone-level redirect)`);
 }
 
 // 2. DNS: proxied CNAMEs to the pages.dev host (Cloudflare flattens the apex CNAME)
@@ -59,8 +63,13 @@ console.log('redirect rule: www -> apex set');
 await api('PATCH', `/zones/${env.zoneId}/settings/always_use_https`, { value: 'on' });
 console.log('always_use_https: on');
 
-// 5. wait for the Pages domains to validate (certificate issuance can take a few minutes)
-for (const name of [APEX, WWW]) {
+// 4b. Scrape Shield off: email obfuscation would rewrite mailto:info@parsanaji.com into a
+//     /cdn-cgi/l/email-protection link and inject a script (spec: plain mailto, strict CSP).
+await api('PATCH', `/zones/${env.zoneId}/settings/email_obfuscation`, { value: 'off' });
+console.log('email_obfuscation: off');
+
+// 5. wait for the apex Pages domain to validate (certificate issuance can take a few minutes)
+for (const name of [APEX]) {
   let status = 'unknown';
   for (let i = 0; i < 30; i++) {
     const d = await api('GET', `/accounts/${env.accountId}/pages/projects/${PROJECT}/domains/${name}`);
