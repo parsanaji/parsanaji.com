@@ -131,7 +131,18 @@ html.no-webgl #field { display: none; }
   outline-offset: 4px;
 }
 .exit [hidden], .clock [hidden] { display: none; }
+.clock[hidden] { display: none; } /* no JavaScript, no clock (spec 5); main.ts un-hides it */
 .clock time { font-variant-numeric: tabular-nums; }
+
+/* Narrow viewports: one row cannot hold the exit line and the clock, so the chrome stacks
+   (tagline, then the links, then the clock right-aligned) and nothing is clipped. */
+@media (max-width: 679px) {
+  .chrome { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .exit { flex-wrap: wrap; row-gap: 6px; }
+  .exit .tagline { flex-basis: 100%; }
+  .exit .tagline + .sep { display: none; }
+  .clock { align-self: flex-end; }
+}
 
 html.has-ring body { cursor: none; }
 html.has-ring .exit a { cursor: pointer; }
