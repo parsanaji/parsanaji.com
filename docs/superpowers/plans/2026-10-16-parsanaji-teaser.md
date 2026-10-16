@@ -1260,6 +1260,7 @@ git push
 
 **Files:**
 - Create: `README.md`
+- Modify: `.github/workflows/deploy.yml` (hardening ruled in the Task 5 review), `docs/OPERATOR.md` (append section 6, CI token)
 - Orchestrator (not the builder): update `C:\Users\parsa\Documents\Obsidian Vault\Projects\parsanaji.com.md` (real deploy recipe, status "slice 1 live"), update `C:\Users\parsa\.claude\projects\C--Users-parsa\memory\parsanaji-com.md`, then compact.
 
 - [ ] **Step 1: Write `README.md`**
@@ -1293,15 +1294,76 @@ any other branch → `https://<branch>.parsanaji-com.pages.dev`. From a terminal
     npm run fonts                    # regenerate the font subsets from scripts/fonts-src
 ```
 
+- [ ] **Step 1b: Harden the deploy workflow** (ruled in the Task 5 review: GitHub forces the Node 20 action majors onto Node 24 with a warning on every run; checkout v7.0.1, setup-node v7.1.0 and wrangler-action v4.1.3 all declare node24 and are drop-in here). Replace `.github/workflows/deploy.yml` with exactly:
+
+```yaml
+name: deploy
+
+on:
+  push:
+    branches: ['**']
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=parsanaji-com --branch=${{ github.ref_name }} --commit-dirty=true
+```
+
+Changes versus Task 5: `timeout-minutes: 10`; `actions/checkout@v7` with `persist-credentials: false` (wrangler only runs local `git rev-parse`/`status`/`show`, which need no credentials); `actions/setup-node@v7`; `cloudflare/wrangler-action@v4` (same inputs; it still uses the repo's pinned `wrangler@4.151.0` from `node_modules`).
+
+- [ ] **Step 1c: Append the CI-token operator step to `docs/OPERATOR.md`** (ruled in the Task 5 review: the Actions secret currently holds the broad operator token, while the deploy step needs only Pages access). Append exactly:
+
+```markdown
+
+## 6. CI token (recommended, after slice 1)
+The GitHub Actions secret `CLOUDFLARE_API_TOKEN` currently holds the broad operator token from `.env`.
+The deploy step only needs Pages access, so swap it for a narrow one:
+Dashboard → My Profile → API Tokens → Create Token → Create Custom Token. Name: `parsanaji-com-ci`.
+Permissions: Account · Cloudflare Pages · Edit (nothing else). Account Resources: Include → your account.
+Create, copy the token once, then in Git Bash (the token is read from a hidden prompt, never typed into the command line):
+
+    export PATH="$PATH:/c/Program Files/GitHub CLI"
+    read -rs CI_TOKEN && printf '%s' "$CI_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN -R parsanaji/parsanaji.com && unset CI_TOKEN
+
+Verify: `gh run rerun <latest run id>` (or push any commit) and the deploy step stays green. `.env` keeps the broad token for the local scripts.
+```
+
 - [ ] **Step 2: Commit and push**
 
 ```bash
-git add README.md
-git commit -m "docs: README with run, deploy and infrastructure recipes
+git add README.md .github/workflows/deploy.yml docs/OPERATOR.md
+git commit -m "docs: README; harden the deploy workflow; CI token operator step
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 git push
+export PATH="$PATH:/c/Program Files/GitHub CLI"
+id=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId'); gh run watch "$id" --exit-status
 ```
+
+Expected: the run is green on the new action majors with no Node-version warning annotations (`gh run view "$id" --json jobs --jq '.jobs[0].steps[] | .name + ": " + .conclusion'` shows every step `success`).
 
 - [ ] **Step 3: Orchestrator checkpoint**
 
