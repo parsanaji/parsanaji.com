@@ -327,7 +327,7 @@ curl -s https://parsanaji.com/ | grep -c "Parsa Naji"
 
 Expected: first `HTTP/2 200` with the CSP header; second `HTTP/2 301` with `location: https://parsanaji.com/`; third a `301` to https; fourth a count of at least 3.
 
-Browser verification: `navigate_page` to `https://parsanaji.com/`, `take_screenshot`; the static page renders in Geist (no fallback-font flash), `list_console_messages` shows no CSP violations.
+Browser verification: `navigate_page` to `https://parsanaji.com/`, `take_screenshot`; the static page renders in Geist (no fallback-font flash). `list_console_messages` must return zero messages at error or warning level of any kind (CSP violations, Permissions-Policy parse errors, font or asset failures) — this is the first time the production `_headers` are exercised in a browser, since `vite preview` ignores them. Repeat the same check at an emulated 390×844.
 
 - [ ] **Step 5: Commit, push, confirm the workflow is green**
 
