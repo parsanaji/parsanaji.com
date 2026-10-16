@@ -1,7 +1,7 @@
 # parsanaji.com — Teaser ("Scene 1") Design
 
 **Date:** 2026-10-16
-**Status:** Design approved in conversation (chunks 1 and 2). Written spec pending Parsa's review.
+**Status:** Approved by Parsa 2026-10-16 ("Looks good"). Amended the same day after the dependency audit (sections 3.3, 3.7, 4.1, 7.2, 7.5, 7.6, 9, 10). Execution: Opus 5.5 subagents build, Fable 5.1 plans and reviews (Parsa's instruction).
 **Owner:** Parsa Naji
 **Live target:** https://parsanaji.com (domain registered at Cloudflare 2026-10-15, nothing deployed yet)
 
@@ -97,7 +97,7 @@ The page has two decision moments: stay vs. bounce in the first two seconds, and
 | Name text | `PARSA NAJI`, uppercase, letter-spacing +0.04 em, one line when viewport width >= 480 px, stacked `PARSA` over `NAJI` (line-height 0.95) below 480 px |
 | Name width | Text block width = 72 % of viewport width (single line) or 86 % (stacked), capped so the block height never exceeds 40 % of viewport height |
 | Alt text (morph target) | `soon.` in the same display font, lowercase, same width rule |
-| Exit line | 12 px Geist Mono, `rgba(245,245,245,0.45)`, letter-spacing 0.08 em, text: `building something new  ·  github  ·  linkedin  ·  say hi` (two spaces around each middle dot) |
+| Exit line | 12 px Geist Mono, `rgba(245,245,245,0.5)` (was 0.45; raised during planning because 12 px text at 0.45 measures about 4.2:1 against `#070707` and fails the 4.5:1 contrast requirement; 0.5 measures about 4.95:1), letter-spacing 0.08 em, text: `building something new  ·  github  ·  linkedin  ·  say hi` (two spaces around each middle dot) |
 | Exit line hover | Target link goes to `rgba(245,245,245,1)` over 150 ms; a 1 px underline slides in from the left over 200 ms (`background-size` technique) |
 | Clock | 12 px Geist Mono, same color as the exit line, text `IRVINE  HH:MM PDT` where the time is `America/Los_Angeles` 24-hour and the zone abbreviation comes from `Intl.DateTimeFormat` (`PDT`/`PST` switches automatically) |
 | Cursor | Over the canvas the native cursor is hidden and replaced by a 6 px ring (1 px stroke, `rgba(245,245,245,0.7)`) following the raw pointer (not the lerped one). Scales to 1.5× over 150 ms while a button is held. Native cursor over links. Ring hidden entirely on `(hover: none)` devices |
@@ -106,10 +106,10 @@ The page has two decision moments: stay vs. bounce in the first two seconds, and
 
 ### 3.3 Particle density
 
-- The sampler renders the text to an `OffscreenCanvas` (fallback: hidden `<canvas>`) at 2× the CSS size and scans every pixel; pixels with alpha > 128 are candidates.
-- Target count `N` by viewport width class: >= 1024 px → 60 000; 768–1023 px → 40 000; < 768 px → 25 000.
-- If candidates exceed `N`, subsample uniformly with a seeded PRNG (seed fixed per page load so morphs are stable). If candidates are fewer than `N`, sample with replacement and add a sub-pixel jitter of ±0.3 px so duplicates are not visible. Every target therefore has exactly `N` points, which keeps morphs one-to-one.
-- `N` is fixed for the session except for the degrade rule (3.6) and a width-class change on resize (3.7).
+- The sampler renders the text to an `OffscreenCanvas` (fallback: hidden `<canvas>`) at 2× the CSS size and scans every pixel; pixels with alpha > 128 are candidates. The candidate count divided by 4 is the inked area in CSS px².
+- Dot count `N` is derived from the name's inked area, not fixed: `N = min(cap, round(inkedAreaCssPx × density))` with `density = 0.30` dots per CSS px² (about one dot every 1.8 px, so individual dots stay visible and letters never read as solid white). Caps by viewport width class: >= 1024 px → 60 000; 768–1023 px → 40 000; < 768 px → 25 000. Expected `N` at 1440×900 is roughly 15 000; at 390×844 roughly 7 000. Both `density` and the caps are debug-panel tunables.
+- If candidates exceed `N`, subsample uniformly with a seeded PRNG (seed fixed per page load so morphs are stable). If candidates are fewer than `N`, sample with replacement and add a sub-pixel jitter of ±0.3 px so duplicates are not visible. Every target therefore has exactly `N` points, which keeps morphs one-to-one. `N` is computed from `PARSA NAJI`; `soon.` is resampled to that same `N`.
+- `N` is fixed for the session except for the degrade rule (3.6) and a resize (3.7).
 
 ### 3.4 Coordinate system
 
@@ -170,8 +170,7 @@ All easing is non-linear. Default curve `easeOutExpo` for arrivals, `easeInCubic
 ### 3.7 Resize and orientation
 
 - Resize is debounced at 150 ms.
-- If the width class (3.3) is unchanged, `N` is kept and both targets are resampled; dots glide to their new homes over 400 ms.
-- If the width class changes, `N` is recomputed and geometry attributes are rebuilt. The current state is preserved (if showing `soon.`, it stays `soon.`).
+- On resize both targets are resampled for the new viewport, `N` is recomputed by the 3.3 formula, and the geometry attributes are rebuilt. Dots snap to their new homes (no glide; a window resize is rare and an orientation change already reflows the whole screen). The current state is preserved (if showing `soon.`, it stays `soon.`); an in-flight morph cycle completes against the new targets.
 
 ### 3.8 Fallbacks
 
@@ -197,17 +196,19 @@ All easing is non-linear. Default curve `easeOutExpo` for arrivals, `easeInCubic
 
 ### 4.1 Stack
 
-- Vite 6, vanilla TypeScript (strict), `three` (latest r17x), no UI framework.
-- `lil-gui` as a dev-only dependency for the debug panel.
-- Vitest for unit tests.
-- Node 24 locally (installed: v24.19.0, npm 11.17.0). The Cloudflare Pages build is pinned with the `NODE_VERSION=22` environment variable (Pages' supported LTS); the code uses no Node-24-only APIs.
-- Package manager: npm.
+- Vite 8 (8.3.x, Rolldown-based), vanilla TypeScript 5.9 (strict; TypeScript 7 is deliberately not used yet), `three` 0.186 with `@types/three` 0.186, `@types/node` 22 for the test files, no UI framework. GLSL files are imported as strings with Vite's built-in `?raw` suffix; no GLSL plugin.
+- `lil-gui` 0.21 as a dev-only dependency for the debug panel (loaded through a dynamic import guarded by `import.meta.env.DEV`, so it is absent from production bundles).
+- Vitest 5 for unit tests (Node environment, no DOM).
+- `geist` 1.7 (npm package carrying the Geist font files) and `subset-font` 2.9 (pure-JS HarfBuzz subsetter; Python is not installed on this PC, so no fonttools) as dev dependencies; the generated subset `.woff2` files are committed under `public/fonts/`.
+- `wrangler` 4 as a dev dependency for Cloudflare Pages deploys; `sharp` as a dev dependency for the OG image downscale.
+- Node 24 locally (installed: v24.19.0, npm 11.17.0). GitHub Actions uses Node 22 (Vite 8 requires `^20.19.0 || >=22.12.0`). The code uses no Node-24-only APIs.
+- Package manager: npm, with `package-lock.json` committed.
 
 ### 4.2 Files
 
 ```
 C:\Users\parsa\parsanaji.com\
-├── index.html                    canvas mount, hidden <h1>/<p>, <noscript>, exit line, clock, cursor ring
+├── index.html                    canvas mount, hidden <h1>/<p>, static fallback (+ <noscript> copy), exit line, clock, cursor ring, JSON-LD
 ├── public/
 │   ├── fonts/GeistSans-Black.subset.woff2
 │   ├── fonts/GeistMono-Regular.subset.woff2
@@ -215,35 +216,53 @@ C:\Users\parsa\parsanaji.com\
 │   ├── og.png
 │   ├── robots.txt
 │   └── _headers                  Cloudflare Pages headers (section 7)
+├── scripts/
+│   ├── subset-fonts.mjs          geist npm package → subset woff2 files (subset-font)
+│   ├── og-placeholder.mjs        slice-1 OG image from SVG shapes (sharp)
+│   ├── og-image.mjs              slice-5 OG image: downscale the engine capture (sharp)
+│   ├── cf-env.mjs                verifies the API token, writes account/zone ids into .env
+│   ├── cf-api.mjs                shared fetch helper for the Cloudflare REST API
+│   ├── cf-setup-pages.mjs        custom domains, DNS, www redirect, Always Use HTTPS (idempotent)
+│   ├── cf-setup-email.mjs        Email Routing enable, destination, rule, catch-all off (idempotent)
+│   └── cf-hsts.mjs               HSTS on (slice 5)
+├── .github/workflows/deploy.yml  test + build + wrangler pages deploy on every push
 ├── src/
-│   ├── main.ts                   boot sequence, wiring, lifecycle
+│   ├── main.ts                   boot: chrome, WebGL probe, font wait, App start, debug panel gate
+│   ├── app.ts                    App: sampling, field, frame loop, pointer/morph wiring, resize, visibility
+│   ├── content.ts                name, alt text, links, clock city/time zone
 │   ├── styles.css                layout, fallback typography, exit line, clock, cursor ring
+│   ├── boot/fonts.ts             waitForFont() with timeout
+│   ├── boot/webgl.ts             hasWebGL2() probe on a scratch canvas
 │   ├── engine/
-│   │   ├── ParticleField.ts      Points + ShaderMaterial, uniforms, setTarget(), update(dt), resize()
-│   │   ├── sampler.ts            textToPoints(), subsampleToN(), layoutText(); imageToPoints() later
-│   │   ├── pointer.ts            unified pointer model: lerp, velocity, trail ring buffer
-│   │   ├── morph.ts              state machine + timers (ENTRY, IDLE, SCRAMBLE_OUT, FORM_ALT, HOLD_ALT, SCRAMBLE_BACK, FORM_NAME)
-│   │   ├── quality.ts            DPR cap, width class → N, fps probe, degrade rule
-│   │   ├── defaults.ts           every tunable with its shipped value
-│   │   ├── easing.ts             easeOutExpo, easeInCubic, easeOutCubic
-│   │   └── prng.ts               seeded mulberry32
+│   │   ├── types.ts              PHASE ids, PointerSlot, RippleState, shared param interfaces
+│   │   ├── defaults.ts           every tunable with its shipped value (Params)
+│   │   ├── ParticleField.ts      Points + ShaderMaterial, uniforms, setTargets(), setMorph(), render()
+│   │   ├── sampler.ts            layoutText(), rasterize(), scanAlpha(), subsampleToN(), sampleText(); imageToPoints() later
+│   │   ├── pointer.ts            PointerModel: lerp, velocity, decaying trail, parking
+│   │   ├── morph.ts              MorphMachine: ENTRY → IDLE → SCRAMBLE_OUT → FORM_ALT → HOLD_ALT → SCRAMBLE_BACK → FORM_NAME, auto-tease
+│   │   ├── motion.ts             breathScale(), RippleScheduler
+│   │   ├── quality.ts            width class caps, dotCount(), capDpr(), FpsProbe, degradedCount()
+│   │   ├── time.ts               clampDt()
+│   │   ├── easing.ts             easeOutExpo, easeInCubic, easeOutCubic, clamp01
+│   │   └── prng.ts               mulberry32, seedFromLocation
 │   ├── shaders/
 │   │   ├── noise.glsl            3D simplex noise (Ashima / Ian McEwan, MIT)
 │   │   ├── field.vert
 │   │   └── field.frag
 │   ├── ui/
-│   │   ├── exitLine.ts           fade-in timing, link wiring, hidden-linkedin rule
-│   │   ├── clock.ts              Intl-based LA time, 1 s tick, visibility resync
-│   │   └── cursor.ts             ring element, pointer follow, press scale, hover:none guard
-│   └── tweaks.ts                 lil-gui panel; only bundled in dev (`import.meta.env.DEV && location.search.includes('debug')`)
-├── tests/
-│   ├── sampler.test.ts
-│   ├── morph.test.ts
-│   ├── pointer.test.ts
-│   └── quality.test.ts
+│   │   ├── exitLine.ts           hidden-linkedin rule (the 2 s fade-in is a CSS animation, so it also works without JS)
+│   │   ├── clock.ts              formatClock() + startClock(): Intl-based LA time, 1 s tick, visibility resync
+│   │   └── cursor.ts             ring element, raw-pointer follow, press scale, hover:none guard, hidden over links
+│   ├── tweaks.ts                 lil-gui panel; dev-only dynamic import behind `?debug`
+│   └── vite-env.d.ts
+├── tests/                        vitest: clock, env, prng, easing, time, quality, sampler (+ helpers/fakeCanvas.ts), motion, pointer, morph, fonts
+├── docs/OPERATOR.md              Parsa's one-time steps (7.6) and how to verify them
 ├── docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md
-├── package.json, tsconfig.json, vite.config.ts, vitest.config.ts
-└── .gitignore
+├── docs/superpowers/plans/2026-10-16-parsanaji-teaser.md
+├── README.md                     run / test / deploy recipes
+├── package.json, package-lock.json, tsconfig.json, vite.config.ts, vitest.config.ts
+├── .env.example                  CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_ZONE_ID
+└── .gitignore                    node_modules, dist, .env, .wrangler
 ```
 
 ### 4.3 Data flow
@@ -321,22 +340,25 @@ Pure TypeScript. `push(rawX, rawY, timestamp)` and `release(timestamp)` from DOM
 
 ### 7.2 Cloudflare Pages
 
-- Project name `parsanaji-com`, connected to the GitHub repo, production branch `main`, preview deployments for every other branch.
-- Build command `npm run build`, output directory `dist`, environment variable `NODE_VERSION=22`.
-- Custom domains `parsanaji.com` (apex) and `www.parsanaji.com`; a Cloudflare Redirect Rule sends `www.parsanaji.com/*` to `https://parsanaji.com/$1` with 301.
-- Always Use HTTPS on. HSTS enabled after the first successful verification (max-age 6 months, then raise).
-- Fallback if the GitHub App authorization is blocked: `npx wrangler pages deploy dist --project-name parsanaji-com` after `npx wrangler login` (no wrangler login exists on this PC yet).
+- Project name `parsanaji-com`, created as a **Direct Upload** project with `wrangler pages project create parsanaji-com --production-branch main`. Deploys are `wrangler pages deploy dist --project-name parsanaji-com --branch <branch>`; `--branch main` is production, any other branch name yields a preview URL `<branch>.parsanaji-com.pages.dev`. (A Direct Upload project cannot be converted to Git integration later; push-to-deploy is provided by GitHub Actions instead, which is equivalent for this site and keeps every step scriptable.)
+- GitHub Actions workflow `.github/workflows/deploy.yml`: on every push, `npm ci`, `npm test`, `npm run build`, then `cloudflare/wrangler-action@v3` runs the deploy with the branch name. Repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- Authentication: one scoped Cloudflare API token (section 7.6) in the gitignored `.env` file as `CLOUDFLARE_API_TOKEN`, plus `CLOUDFLARE_ACCOUNT_ID`. Wrangler reads both from the environment; the REST calls below use the same token. No `wrangler login` OAuth session is needed.
+- Custom domains `parsanaji.com` (apex) and `www.parsanaji.com`, added through the Pages API (`POST /accounts/{account_id}/pages/projects/parsanaji-com/domains`) with proxied CNAME records to `parsanaji-com.pages.dev` created through the DNS API (the apex uses Cloudflare CNAME flattening). A Single Redirect rule (ruleset phase `http_request_dynamic_redirect`) sends `www.parsanaji.com/*` to `https://parsanaji.com/<same path>` with 301 and preserves the query string.
+- Always Use HTTPS on (zone setting `always_use_https`). HSTS enabled in slice 5 after the first successful verification (max-age 6 months, then raise).
 - Cloudflare Pages redirects `*.html` with 308 to clean URLs; the site has only `/`, so no internal `.html` links exist.
 
 ### 7.3 Headers (`public/_headers`)
 
 ```
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src 'self'; font-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
   X-Frame-Options: DENY
+
+/
+  Cache-Control: no-cache
 
 /index.html
   Cache-Control: no-cache
@@ -348,7 +370,7 @@ Pure TypeScript. `push(rawX, rawY, timestamp)` and `release(timestamp)` from DOM
   Cache-Control: public, max-age=31536000, immutable
 ```
 
-No inline scripts or styles in production, so the CSP needs no nonces or `'unsafe-inline'`. The analytics beacon is included only when the production build sets `VITE_CF_BEACON_TOKEN`; without it the page ships with zero third-party requests and the CSP still passes.
+No inline scripts or styles in production, so the CSP needs no nonces or `'unsafe-inline'`. The `/` and `/index.html` entries both get `Cache-Control: no-cache` because Pages serves the page at `/`. The JSON-LD `<script type="application/ld+json">` block is a data block, not executable script, and is not subject to `script-src`. The analytics beacon (7.5) is an external script from `static.cloudflareinsights.com` with a `data-cf-beacon` attribute, so it passes this CSP without changes; with analytics off the page makes zero third-party requests.
 
 ### 7.4 Email
 
@@ -358,13 +380,24 @@ No inline scripts or styles in production, so the CSP needs no nonces or `'unsaf
 
 ### 7.5 Analytics
 
-- Cloudflare Web Analytics (free, cookieless, no consent banner needed). The beacon token is stored as the Pages environment variable `VITE_CF_BEACON_TOKEN` and injected at build time.
+- Cloudflare Web Analytics (free, cookieless, no consent banner needed). Enabled with the **Web Analytics** toggle on the Pages project in the Cloudflare dashboard (Workers & Pages → `parsanaji-com` → Metrics → Enable Web Analytics). Cloudflare then injects the beacon `<script>` into served HTML automatically; nothing is added to the source and no build variable exists. Parsa can turn it off with the same toggle.
 
-### 7.6 Operator steps (Parsa, in a browser, one time)
+### 7.6 Operator steps (Parsa, one time)
 
-1. Authorize the Cloudflare Pages GitHub App for the repo (or run `npx wrangler login`).
-2. Click the Email Routing destination verification link in the iCloud inbox.
-3. Open the finished site on the iPhone for the Safari check.
+1. **GitHub CLI.** In PowerShell: `winget install GitHub.cli`, then `gh auth login` (GitHub.com, HTTPS, browser) signed in as `parsanaji9-eng`. Verify with `gh auth status`.
+2. **Cloudflare API token.** Dashboard → My Profile → API Tokens → Create Token → Create Custom Token, named `parsanaji-com-deploy`, with exactly these permissions:
+   - Account · Cloudflare Pages · Edit
+   - Account · Email Routing Addresses · Edit
+   - Account · Account Settings · Read
+   - Zone · Zone · Read
+   - Zone · DNS · Edit
+   - Zone · Zone Settings · Edit
+   - Zone · Email Routing Rules · Edit
+   - Zone · Single Redirect · Edit (older dashboards label it "Dynamic Redirect")
+   Account Resources: Include → the account that holds parsanaji.com. Zone Resources: Include → Specific zone → `parsanaji.com`. Copy the token once into `C:\Users\parsa\parsanaji.com\.env` as `CLOUDFLARE_API_TOKEN=<token>` (the file is gitignored). The builder fills in `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_ZONE_ID` from the API.
+3. **Email verification.** Click the Cloudflare Email Routing verification link that arrives at `private-inbox@example.com`.
+4. **Analytics.** Flip the Web Analytics toggle on the Pages project (7.5). Optional.
+5. **Device check.** Open the finished site in Safari on the iPhone (slice 5 checklist).
 
 Everything else is automated from the terminal.
 
@@ -406,13 +439,13 @@ Everything else is automated from the terminal.
 
 ## 9. Implementation slices (detailed plan produced by writing-plans)
 
-1. **Scaffold and go live.** Vite + TS + `three`, static fallback page with real fonts, `_headers`, Pages project, custom domains, email routing. parsanaji.com resolves to the static typographic page on day one. "Site not found" ends here.
-2. **Sampler and field.** Text → points, GPU field, entry animation, idle vibration, breath, ripple. Unit tests for the sampler.
-3. **Pointer and chrome.** Repel with trail, cursor ring, exit line, clock, reduced-motion branch for what exists so far. Unit tests for the pointer model.
-4. **Morph.** State machine, scramble ↔ `soon.`, auto-tease, touch, adaptive quality, resize rules. Unit tests for morph and quality.
-5. **Polish and proof.** OG image, favicon, JSON-LD, Lighthouse, DevTools traces, iPhone check, slop gate, defaults frozen from the debug panel, vault and memory updated.
+1. **Scaffold and go live.** Vite + TS project, subset fonts, the static typographic page (name, exit line, live clock, favicon, robots, `_headers`), GitHub repo + Actions, Pages project, custom domains, redirect, HTTPS, email routing. parsanaji.com resolves to the static page on day one. "Site not found" ends here.
+2. **Engine core.** PRNG, easing, quality tables, sampler (with unit tests), shaders, `ParticleField`, boot sequence with the entry animation, idle vibration, breath, ripple, and the debug panel.
+3. **Pointer.** Pointer model with trail (unit tests), repel wiring, cursor ring, touch handling.
+4. **Morph and resilience.** Morph state machine (unit tests), click/tap/auto-tease, reduced motion, fps probe and degrade (unit tests), resize rules, visibility handling.
+5. **Polish and proof.** OG image, JSON-LD check, Lighthouse, DevTools traces, iPhone check, `anti-ui-slop` gate, HSTS, defaults frozen from the debug panel, vault and memory updated.
 
-Each slice ends with tests green, a commit, and a Pages preview URL Parsa can open.
+Each slice ends with tests green, a commit, and a Pages URL Parsa can open (production after slice 1, previews after every later slice until it is merged).
 
 ---
 
@@ -422,7 +455,7 @@ Each slice ends with tests green, a commit, and a Pages preview URL Parsa can op
 |---|---|---|
 | LinkedIn profile URL | Parsa | `linkedin` link hidden |
 | GitHub account rename | Parsa (later) | link points at `parsanaji9-eng` |
-| Cloudflare Web Analytics token | Claude creates during slice 1; Parsa can say "no analytics" | analytics on |
+| Web Analytics | Parsa flips the dashboard toggle (7.5) or leaves it off | off until toggled |
 
 ---
 
@@ -435,6 +468,7 @@ Each slice ends with tests green, a commit, and a Pages preview URL Parsa can op
 | Exits | Quiet bottom-left text line | Dead end (strands employers); email capture form (friction) |
 | Typeface | Geist Sans 900 + Geist Mono | Inter (ubiquitous, reads generic); paid faces (licensing friction) |
 | Email | `info@parsanaji.com` → `private-inbox@example.com` via Cloudflare Email Routing | `hello@`; raw Gmail/iCloud address on the page |
-| Hosting | Cloudflare Pages from GitHub | Vercel (second vendor; DNS already at Cloudflare) |
+| Hosting | Cloudflare Pages, Direct Upload project deployed by wrangler from GitHub Actions on every push | Pages Git integration (needs dashboard GitHub App auth, not scriptable, and a Direct Upload project cannot be converted later); Vercel (second vendor; DNS already at Cloudflare) |
+| Dot count | Derived from inked area × density 0.30, capped per width class | Fixed 60k/40k/25k (would render letters as solid white at 1.6 px dots) |
 | Analytics | Cloudflare Web Analytics, cookieless | None; Plausible (cost); GA (consent burden) |
 | Framework | None (vanilla TS) | Astro / Next (not needed for one screen; the engine stays portable for either later) |
