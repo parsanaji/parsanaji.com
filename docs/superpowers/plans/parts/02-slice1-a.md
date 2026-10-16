@@ -535,7 +535,7 @@ html.no-webgl #field { display: none; }
   animation: chrome-in 600ms ease 2000ms both;
 }
 .chrome[hidden] { display: none; }
-.chrome:focus-within { animation: none; } /* a keyboard user must never land on an invisible link during the fade */
+.chrome:focus-within { animation-delay: 0ms; animation-duration: 0ms; } /* a keyboard user must never land on an invisible link during the fade; `animation: none` would restart the fade on blur */
 @keyframes chrome-in {
   from { opacity: 0; }
   to { opacity: 1; }
