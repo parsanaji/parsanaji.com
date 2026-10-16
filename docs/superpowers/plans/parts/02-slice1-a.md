@@ -416,7 +416,7 @@ export function initExitLine(linkedinUrl: string, doc: Document = document): voi
         <span class="sep" aria-hidden="true">·</span>
         <a href="mailto:info@parsanaji.com">say hi</a>
       </p>
-      <p id="clock" class="clock" aria-label="Local time in Irvine, California" hidden>
+      <p id="clock" class="clock" role="group" aria-label="Local time in Irvine, California" hidden>
         <span>IRVINE</span>
         <time id="clock-time">--:--</time>
         <span id="clock-zone">PT</span>
@@ -521,9 +521,9 @@ html.no-webgl #field { display: none; }
 
 .chrome {
   position: fixed;
-  left: var(--inset);
-  right: var(--inset);
-  bottom: var(--inset);
+  left: max(var(--inset), env(safe-area-inset-left, 0px));
+  right: max(var(--inset), env(safe-area-inset-right, 0px));
+  bottom: max(var(--inset), env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -535,6 +535,7 @@ html.no-webgl #field { display: none; }
   animation: chrome-in 600ms ease 2000ms both;
 }
 .chrome[hidden] { display: none; }
+.chrome:focus-within { animation: none; } /* a keyboard user must never land on an invisible link during the fade */
 @keyframes chrome-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -565,7 +566,7 @@ html.no-webgl #field { display: none; }
   outline-offset: 4px;
 }
 .exit [hidden], .clock [hidden] { display: none; }
-.clock[hidden] { display: none; } /* no JavaScript, no clock (spec 5); main.ts un-hides it */
+.clock[hidden] { visibility: hidden; } /* no JavaScript, no clock (spec 5); main.ts un-hides it. visibility keeps the row, so the exit line never jumps when the clock appears */
 .clock time { font-variant-numeric: tabular-nums; }
 
 /* Narrow viewports: one row cannot hold the exit line and the clock, so the chrome stacks
@@ -645,8 +646,7 @@ boot();
   Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
-  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()  X-Frame-Options: DENY
 
 /
   Cache-Control: no-cache

@@ -77,7 +77,7 @@ The page has two decision moments: stay vs. bounce in the first two seconds, and
 
 - Full-viewport canvas, `position: fixed; inset: 0`. `html, body { overflow: hidden }`. No scrollbars on any device.
 - Name centered at the viewport center on both axes.
-- Exit line anchored bottom-left with a 24 px inset on desktop and 16 px on phones.
+- Exit line anchored bottom-left with a 24 px inset on desktop and 16 px on phones (or the device safe-area inset when that is larger).
 - Clock anchored bottom-right with the same insets.
 - Below 680 px of viewport width one row cannot hold both, so the chrome stacks: the tagline, then the links row, then the clock right-aligned on its own row. Nothing is ever clipped, and the LinkedIn link fits when it appears. (Ruled during the Task 3 review, 2026-10-16: the first build clipped the clock to `IRV` at 390 px.)
 - Nothing else on screen.
@@ -357,8 +357,7 @@ Pure TypeScript. `push(rawX, rawY, timestamp)` and `release(timestamp)` from DOM
   Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
-  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()  X-Frame-Options: DENY
 
 /
   Cache-Control: no-cache

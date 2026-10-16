@@ -148,7 +148,7 @@ git push
 
 - [ ] **Step 1: Keyboard and semantics** (DevTools MCP on the preview URL)
 
-1. `take_snapshot` (accessibility tree): a level-1 heading `Parsa Naji`, the paragraph `Building something new.`, links `github` and `say hi` (no `linkedin` while the URL is empty), the clock paragraph with its `aria-label`; the canvas absent from the tree.
+1. `take_snapshot` (accessibility tree): a level-1 heading `Parsa Naji`, the paragraph `Building something new.`, links `github` and `say hi` (no `linkedin` while the URL is empty), the clock group (`role="group"`) with its `aria-label`; the canvas absent from the tree.
 2. `press_key` Tab twice: focus lands on `github`, then `say hi`; `take_screenshot` after each shows the 2 px focus ring and the underline. Enter on `github` opens the profile (then navigate back).
 3. Zoom approximation: `evaluate_script` → `document.documentElement.style.zoom = '2'`: the exit line and clock stay inside the viewport without overlapping the name. Reset afterwards.
 
