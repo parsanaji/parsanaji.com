@@ -212,6 +212,7 @@ C:\Users\parsa\parsanaji.com\
 ├── public/
 │   ├── fonts/GeistSans-Black.subset.woff2
 │   ├── fonts/GeistMono-Regular.subset.woff2
+│   ├── fonts/LICENSE.txt         SIL OFL 1.1 (ships with the subsets, OFL condition 2)
 │   ├── favicon.svg
 │   ├── og.png
 │   ├── robots.txt

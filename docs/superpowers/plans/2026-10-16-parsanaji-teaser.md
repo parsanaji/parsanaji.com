@@ -229,7 +229,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Create: `scripts/subset-fonts.mjs`
 - Consumes: `scripts/fonts-src/Geist-Black.woff2`, `scripts/fonts-src/GeistMono-Regular.woff2`, `scripts/fonts-src/LICENSE.txt` (vendored in Task 1 from geist@1.7.2 after a review ruling; the `geist` npm package is not a dependency because it peer-requires Next.js. Refresh later with `npm pack geist@<version>` and copy from the tarball `package/dist/fonts/`.)
-- Create (generated, committed): `public/fonts/GeistSans-Black.subset.woff2`, `public/fonts/GeistMono-Regular.subset.woff2`
+- Create (generated, committed): `public/fonts/GeistSans-Black.subset.woff2`, `public/fonts/GeistMono-Regular.subset.woff2`, `public/fonts/LICENSE.txt`
 
 **Interfaces:**
 - Produces: the two font URLs `/fonts/GeistSans-Black.subset.woff2` and `/fonts/GeistMono-Regular.subset.woff2` referenced by `src/styles.css` and `index.html` (Task 3). Display subset covers `A–Z a–z . space`; mono subset covers printable ASCII plus `·` (U+00B7).
@@ -239,7 +239,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```js
 // Generates the two self-hosted font subsets from the vendored Geist sources in scripts/fonts-src/ (SIL OFL 1.1).
 // Run: node scripts/subset-fonts.mjs   (also: npm run fonts)
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import subsetFont from 'subset-font';
 
@@ -256,6 +256,8 @@ const jobs = [
 ];
 
 await mkdir(outDir, { recursive: true });
+// OFL 1.1 condition 2: the license travels with every redistributed copy, subsets included.
+await copyFile(path.join(srcDir, 'LICENSE.txt'), path.join(outDir, 'LICENSE.txt'));
 let total = 0;
 for (const job of jobs) {
   const input = await readFile(path.join(srcDir, job.src));
@@ -281,7 +283,7 @@ Expected: two files written, each well under 20 KB, `total:` under 40 KB, exit 0
 - [ ] **Step 3: Confirm the files exist**
 
 Run: `ls -la public/fonts`
-Expected: both `.subset.woff2` files listed with non-zero sizes.
+Expected: both `.subset.woff2` files listed with non-zero sizes, plus `LICENSE.txt` (the SIL OFL 1.1 text copied from `scripts/fonts-src/`, served at `/fonts/LICENSE.txt` because subset fonts are Modified Versions under OFL condition 2).
 
 - [ ] **Step 4: Commit**
 
