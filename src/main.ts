@@ -32,10 +32,15 @@ async function boot(): Promise<void> {
 
   const params = cloneParams(DEFAULTS);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // [Task 15] debug panel loads here, before sampling, so saved tweaks affect N
+  let mountTweaks: ((app: App) => void) | null = null;
+  if (import.meta.env.DEV && query.has('debug')) {
+    const tweaks = await import('./tweaks');
+    mountTweaks = tweaks.prepareTweaks(params);
+  }
   await waitForFont(`${params.raster.fontWeight} 10px "${params.raster.fontFamily}"`, 2000);
   const app = new App({ canvas, params, reduced, seed: seedFromLocation(location.search) });
   app.start();
+  mountTweaks?.(app);
 }
 
 boot().catch((error: unknown) => {
