@@ -29,6 +29,13 @@ export interface RippleState {
 }
 export const RIPPLE_OFF: RippleState = Object.freeze({ active: false, ox: 0, oy: 0, radius: 0, amplitude: 0, band: 1 });
 
+/** Dot-count caps per viewport width class (spec 3.3); debug-panel tunable. */
+export interface CountCaps {
+  desktop: number;
+  tablet: number;
+  phone: number;
+}
+
 export interface RippleParams {
   intervalMs: number;
   jitterMs: number;
@@ -83,6 +90,7 @@ export interface ProbeParams {
 
 export interface Params {
   density: number;
+  caps: CountCaps;
   dotSize: number;
   sizeVarMin: number;
   sizeVarMax: number;

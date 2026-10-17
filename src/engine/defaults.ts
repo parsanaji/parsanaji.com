@@ -1,13 +1,15 @@
+import { COUNT_CAP } from './quality';
 import type { Params } from './types';
 
 export const DEFAULTS: Params = {
   density: 0.3,
+  caps: { ...COUNT_CAP },
   dotSize: 1.6,
   sizeVarMin: 0.75,
   sizeVarMax: 1.25,
   alphaMin: 0.6,
   alphaMax: 1.0,
-  alphaScale: 0.9,
+  alphaScale: 1.0,
   nearScale: 1.3,
   additive: true,
   vibAmp: 0.6,

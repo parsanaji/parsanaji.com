@@ -25,6 +25,12 @@ describe('dotCount', () => {
     expect(dotCount(1_000_000, 390, 0.3)).toBe(25_000);
   });
 
+  it('honours injected caps (debug-panel tunable, spec 3.3)', () => {
+    const caps = { desktop: 30_000, tablet: 20_000, phone: 10_000 };
+    expect(dotCount(1_000_000, 1440, 0.3, caps)).toBe(30_000);
+    expect(dotCount(1_000_000, 390, 0.3, caps)).toBe(10_000);
+  });
+
   it('never returns less than 1', () => {
     expect(dotCount(0, 1440, 0.3)).toBe(1);
   });
