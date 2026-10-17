@@ -9,7 +9,7 @@
 **Interfaces:**
 - Produces: `mulberry32(seed: number): () => number` (uniform in [0,1)), `seedFromLocation(search: string, fallback?: () => number): number`; `easeOutExpo`, `easeInCubic`, `easeOutCubic`, `clamp01` (all `(t: number) => number`); `clampDt(dtMs: number, maxMs = 50): number`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/prng.test.ts`:
 ```ts
@@ -97,12 +97,12 @@ describe('clampDt', () => {
 });
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/prng.test.ts tests/easing.test.ts tests/time.test.ts`
 Expected: FAIL — modules not found.
 
-- [ ] **Step 3: Write the modules**
+- [x] **Step 3: Write the modules**
 
 `src/engine/prng.ts`:
 ```ts
@@ -145,12 +145,12 @@ export function clampDt(dtMs: number, maxMs = 50): number {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/prng.test.ts tests/easing.test.ts tests/time.test.ts`
 Expected: all pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/engine/prng.ts src/engine/easing.ts src/engine/time.ts tests/prng.test.ts tests/easing.test.ts tests/time.test.ts
@@ -172,7 +172,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces (`defaults.ts`): `DEFAULTS: Params` (spec 3.2–3.7 numbers; `caps` is a copy of `COUNT_CAP`) and `cloneParams(p)`.
 - Produces (`quality.ts`): `widthClass(vw) → 'desktop' | 'tablet' | 'phone'`, `COUNT_CAP`, `dotCount(inkedAreaCssPx, vw, density, caps?)`, `capDpr(dpr, max = 2)`, `degradedCount(n, factor = 0.6)`, `class FpsProbe { push(dtMs): 'pending' | 'keep' | 'degrade'; done: boolean }`.
 
-- [ ] **Step 1: Write `src/engine/types.ts`**
+- [x] **Step 1: Write `src/engine/types.ts`**
 
 ```ts
 export const PHASE = {
@@ -298,7 +298,7 @@ export interface Params {
 }
 ```
 
-- [ ] **Step 2: Write `src/engine/defaults.ts`** (every number traces to spec 3.2–3.7; `caps` copies `COUNT_CAP` from `quality.ts`, written in Step 4)
+- [x] **Step 2: Write `src/engine/defaults.ts`** (every number traces to spec 3.2–3.7; `caps` copies `COUNT_CAP` from `quality.ts`, written in Step 4)
 
 ```ts
 import { COUNT_CAP } from './quality';
@@ -357,7 +357,7 @@ export function cloneParams(p: Params): Params {
 }
 ```
 
-- [ ] **Step 3: Write the failing quality and defaults tests** (`tests/quality.test.ts`, `tests/defaults.test.ts`)
+- [x] **Step 3: Write the failing quality and defaults tests** (`tests/quality.test.ts`, `tests/defaults.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -468,7 +468,7 @@ describe('cloneParams', () => {
 });
 ```
 
-- [ ] **Step 4: Run to verify failure, then write `src/engine/quality.ts`**
+- [x] **Step 4: Run to verify failure, then write `src/engine/quality.ts`**
 
 Run: `npx vitest run tests/quality.test.ts tests/defaults.test.ts` → FAIL (module not found: `quality.ts` does not exist yet, and `defaults.ts` imports it). Then:
 
@@ -530,12 +530,12 @@ export class FpsProbe {
 }
 ```
 
-- [ ] **Step 5: Run the tests and typecheck**
+- [x] **Step 5: Run the tests and typecheck**
 
 Run: `npx vitest run tests/quality.test.ts tests/defaults.test.ts && npm run typecheck`
 Expected: all pass; `tsc` silent.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/engine/types.ts src/engine/defaults.ts src/engine/quality.ts tests/quality.test.ts tests/defaults.test.ts
@@ -558,7 +558,7 @@ Turns a string into exactly `N` centred points. Pure math over an injected 2D ca
 - Consumes: `LayoutParams`, `RasterParams` (Task 10); `mulberry32` (Task 9, tests only).
 - Produces: types `Canvas2DLike`, `Context2DLike`, `CanvasFactory`, `MeasureFn`, `LayoutOptions`, `Layout`, `LineBox`, `Raster`, `SampleResult`; functions `layoutText(text, opts, measure)`, `makeMeasure(canvas, raster)`, `rasterize(layout, raster, letterSpacingEm, createCanvas)`, `drawSpaced(ctx, text, x, y, spacing)`, `scanAlpha(img, threshold = 128)`, `subsampleToN(points, n, rand, jitter = 0.3)`, `sampleText(text, opts, raster, createCanvas, measure)`. Points are `Float32Array` of interleaved `x, y` in centred CSS px, y up.
 
-- [ ] **Step 1: Write the fake canvas helper** (`tests/helpers/fakeCanvas.ts`)
+- [x] **Step 1: Write the fake canvas helper** (`tests/helpers/fakeCanvas.ts`)
 
 ```ts
 import type { Canvas2DLike, Context2DLike } from '../../src/engine/sampler';
@@ -636,7 +636,7 @@ export function createFakeCanvasFactory(opts: FakeOptions = {}): {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests** (`tests/sampler.test.ts`)
+- [x] **Step 2: Write the failing tests** (`tests/sampler.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -768,12 +768,12 @@ describe('sampleText', () => {
 });
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `npx vitest run tests/sampler.test.ts`
 Expected: FAIL — `../src/engine/sampler` not found.
 
-- [ ] **Step 4: Write `src/engine/sampler.ts`**
+- [x] **Step 4: Write `src/engine/sampler.ts`**
 
 ```ts
 import type { LayoutParams, RasterParams } from './types';
@@ -1026,12 +1026,12 @@ export function sampleText(
 }
 ```
 
-- [ ] **Step 5: Run the tests and typecheck**
+- [x] **Step 5: Run the tests and typecheck**
 
 Run: `npx vitest run tests/sampler.test.ts && npm run typecheck`
 Expected: all pass; `tsc` silent. If `noUnusedLocals` complains about anything, remove the unused symbol rather than loosening the config.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/engine/sampler.ts tests/helpers/fakeCanvas.ts tests/sampler.test.ts

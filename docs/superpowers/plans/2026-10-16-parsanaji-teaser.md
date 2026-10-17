@@ -1389,7 +1389,7 @@ Update the vault note and memory file with: live URL confirmed, deploy recipe, e
 **Interfaces:**
 - Produces: `mulberry32(seed: number): () => number` (uniform in [0,1)), `seedFromLocation(search: string, fallback?: () => number): number`; `easeOutExpo`, `easeInCubic`, `easeOutCubic`, `clamp01` (all `(t: number) => number`); `clampDt(dtMs: number, maxMs = 50): number`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/prng.test.ts`:
 ```ts
@@ -1477,12 +1477,12 @@ describe('clampDt', () => {
 });
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/prng.test.ts tests/easing.test.ts tests/time.test.ts`
 Expected: FAIL — modules not found.
 
-- [ ] **Step 3: Write the modules**
+- [x] **Step 3: Write the modules**
 
 `src/engine/prng.ts`:
 ```ts
@@ -1525,12 +1525,12 @@ export function clampDt(dtMs: number, maxMs = 50): number {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/prng.test.ts tests/easing.test.ts tests/time.test.ts`
 Expected: all pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/engine/prng.ts src/engine/easing.ts src/engine/time.ts tests/prng.test.ts tests/easing.test.ts tests/time.test.ts
@@ -1552,7 +1552,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces (`defaults.ts`): `DEFAULTS: Params` (spec 3.2–3.7 numbers; `caps` is a copy of `COUNT_CAP`) and `cloneParams(p)`.
 - Produces (`quality.ts`): `widthClass(vw) → 'desktop' | 'tablet' | 'phone'`, `COUNT_CAP`, `dotCount(inkedAreaCssPx, vw, density, caps?)`, `capDpr(dpr, max = 2)`, `degradedCount(n, factor = 0.6)`, `class FpsProbe { push(dtMs): 'pending' | 'keep' | 'degrade'; done: boolean }`.
 
-- [ ] **Step 1: Write `src/engine/types.ts`**
+- [x] **Step 1: Write `src/engine/types.ts`**
 
 ```ts
 export const PHASE = {
@@ -1678,7 +1678,7 @@ export interface Params {
 }
 ```
 
-- [ ] **Step 2: Write `src/engine/defaults.ts`** (every number traces to spec 3.2–3.7; `caps` copies `COUNT_CAP` from `quality.ts`, written in Step 4)
+- [x] **Step 2: Write `src/engine/defaults.ts`** (every number traces to spec 3.2–3.7; `caps` copies `COUNT_CAP` from `quality.ts`, written in Step 4)
 
 ```ts
 import { COUNT_CAP } from './quality';
@@ -1737,7 +1737,7 @@ export function cloneParams(p: Params): Params {
 }
 ```
 
-- [ ] **Step 3: Write the failing quality and defaults tests** (`tests/quality.test.ts`, `tests/defaults.test.ts`)
+- [x] **Step 3: Write the failing quality and defaults tests** (`tests/quality.test.ts`, `tests/defaults.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -1848,7 +1848,7 @@ describe('cloneParams', () => {
 });
 ```
 
-- [ ] **Step 4: Run to verify failure, then write `src/engine/quality.ts`**
+- [x] **Step 4: Run to verify failure, then write `src/engine/quality.ts`**
 
 Run: `npx vitest run tests/quality.test.ts tests/defaults.test.ts` → FAIL (module not found: `quality.ts` does not exist yet, and `defaults.ts` imports it). Then:
 
@@ -1910,12 +1910,12 @@ export class FpsProbe {
 }
 ```
 
-- [ ] **Step 5: Run the tests and typecheck**
+- [x] **Step 5: Run the tests and typecheck**
 
 Run: `npx vitest run tests/quality.test.ts tests/defaults.test.ts && npm run typecheck`
 Expected: all pass; `tsc` silent.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/engine/types.ts src/engine/defaults.ts src/engine/quality.ts tests/quality.test.ts tests/defaults.test.ts
@@ -1938,7 +1938,7 @@ Turns a string into exactly `N` centred points. Pure math over an injected 2D ca
 - Consumes: `LayoutParams`, `RasterParams` (Task 10); `mulberry32` (Task 9, tests only).
 - Produces: types `Canvas2DLike`, `Context2DLike`, `CanvasFactory`, `MeasureFn`, `LayoutOptions`, `Layout`, `LineBox`, `Raster`, `SampleResult`; functions `layoutText(text, opts, measure)`, `makeMeasure(canvas, raster)`, `rasterize(layout, raster, letterSpacingEm, createCanvas)`, `drawSpaced(ctx, text, x, y, spacing)`, `scanAlpha(img, threshold = 128)`, `subsampleToN(points, n, rand, jitter = 0.3)`, `sampleText(text, opts, raster, createCanvas, measure)`. Points are `Float32Array` of interleaved `x, y` in centred CSS px, y up.
 
-- [ ] **Step 1: Write the fake canvas helper** (`tests/helpers/fakeCanvas.ts`)
+- [x] **Step 1: Write the fake canvas helper** (`tests/helpers/fakeCanvas.ts`)
 
 ```ts
 import type { Canvas2DLike, Context2DLike } from '../../src/engine/sampler';
@@ -2016,7 +2016,7 @@ export function createFakeCanvasFactory(opts: FakeOptions = {}): {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests** (`tests/sampler.test.ts`)
+- [x] **Step 2: Write the failing tests** (`tests/sampler.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -2148,12 +2148,12 @@ describe('sampleText', () => {
 });
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `npx vitest run tests/sampler.test.ts`
 Expected: FAIL — `../src/engine/sampler` not found.
 
-- [ ] **Step 4: Write `src/engine/sampler.ts`**
+- [x] **Step 4: Write `src/engine/sampler.ts`**
 
 ```ts
 import type { LayoutParams, RasterParams } from './types';
@@ -2406,12 +2406,12 @@ export function sampleText(
 }
 ```
 
-- [ ] **Step 5: Run the tests and typecheck**
+- [x] **Step 5: Run the tests and typecheck**
 
 Run: `npx vitest run tests/sampler.test.ts && npm run typecheck`
 Expected: all pass; `tsc` silent. If `noUnusedLocals` complains about anything, remove the unused symbol rather than loosening the config.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/engine/sampler.ts tests/helpers/fakeCanvas.ts tests/sampler.test.ts
@@ -2433,7 +2433,7 @@ All motion lives in the vertex shader; the TypeScript class only owns the Three.
 - Produces: `class ParticleField { constructor(canvas, params, dpr); size; setViewport(w, h); setDpr(dpr); setTargets(home, alt, rand, p); setMorph(phase, tMs, durMs, staggerMs); setTime(ms); setBreath(scale); setReduced(bool); setRepelRadius(px); setRipple(state); setPointer(slots); applyParams(params); render(); dispose() }`.
 - Shader contract: attributes `position` (home, vec3), `aAlt` (vec2), `aSeed`, `aSize`, `aAlpha`; uniforms listed in `field.vert`; phase ids match `PHASE` in `types.ts`.
 
-- [ ] **Step 1: Write `src/shaders/noise.glsl`** (Ashima Arts simplex noise, MIT — keep the header)
+- [x] **Step 1: Write `src/shaders/noise.glsl`** (Ashima Arts simplex noise, MIT — keep the header)
 
 ```glsl
 // Simplex 3D noise. Ian McEwan, Ashima Arts. MIT License. https://github.com/ashima/webgl-noise
@@ -2489,7 +2489,7 @@ float snoise(vec3 v) {
 }
 ```
 
-- [ ] **Step 2: Write `src/shaders/field.vert`** (GLSL3; Three.js declares `position`, `projectionMatrix`, `modelViewMatrix` and the precision for us. `noise.glsl` is prepended at runtime.)
+- [x] **Step 2: Write `src/shaders/field.vert`** (GLSL3; Three.js declares `position`, `projectionMatrix`, `modelViewMatrix` and the precision for us. `noise.glsl` is prepended at runtime.)
 
 ```glsl
 in vec2 aAlt;
@@ -2612,7 +2612,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: Write `src/shaders/field.frag`** (GLSL3: the shader declares its own `out vec4`; three 0.186 defines `pc_fragColor` / `gl_FragColor` only for non-GLSL3 ShaderMaterials)
+- [x] **Step 3: Write `src/shaders/field.frag`** (GLSL3: the shader declares its own `out vec4`; three 0.186 defines `pc_fragColor` / `gl_FragColor` only for non-GLSL3 ShaderMaterials)
 
 ```glsl
 in float vAlpha;
@@ -2631,7 +2631,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 4: Write `src/engine/ParticleField.ts`**
+- [x] **Step 4: Write `src/engine/ParticleField.ts`**
 
 ```ts
 import * as THREE from 'three';
@@ -2829,12 +2829,12 @@ export class ParticleField {
 }
 ```
 
-- [ ] **Step 5: Typecheck and build**
+- [x] **Step 5: Typecheck and build**
 
 Run: `npm run typecheck && npx vite build`
 Expected: `tsc` silent (the `?raw` imports resolve through `vite/client` types); the build succeeds. `three` is not yet imported by `main.ts`, so the chunk is still small; that changes in Task 14.
 
-- [ ] **Step 5b: Prove the shaders compile and draw in a real browser** (nothing is committed from this step)
+- [x] **Step 5b: Prove the shaders compile and draw in a real browser** (nothing is committed from this step)
 
 Start `npm run dev` in the background, open `http://localhost:5173/` in a fresh DevTools MCP page, and run with `evaluate_script` (Vite serves source modules by path in dev):
 
@@ -2921,7 +2921,7 @@ async () => {
 
 Expected: `{ vibrationBytes: 0, velocityBytes: 0, fadedLit: 0 }` (identical frames 5 s apart, identical frames at pointer velocity 0 and 1, and a fully faded field at the end of a reduced SCRAMBLE_OUT with the pointer on top of it). Paste the JSON into the report, then stop the dev server.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/shaders src/engine/ParticleField.ts
@@ -2942,7 +2942,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: `RippleParams`, `RippleState`, `RIPPLE_OFF` (Task 10).
 - Produces: `breathScale(tMs, amp, periodMs): number`; `class RippleScheduler { constructor(params, rand); setParams(p); tick(dtMs, pickOrigin: () => readonly [number, number]): RippleState }`.
 
-- [ ] **Step 1: Write the failing tests** (`tests/motion.test.ts`)
+- [x] **Step 1: Write the failing tests** (`tests/motion.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -3010,7 +3010,7 @@ describe('RippleScheduler', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify failure, then write `src/engine/motion.ts`**
+- [x] **Step 2: Run to verify failure, then write `src/engine/motion.ts`**
 
 Run: `npx vitest run tests/motion.test.ts` → FAIL. Then:
 
@@ -3076,12 +3076,12 @@ export class RippleScheduler {
 }
 ```
 
-- [ ] **Step 3: Run the tests**
+- [x] **Step 3: Run the tests**
 
 Run: `npx vitest run tests/motion.test.ts`
 Expected: all pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/engine/motion.ts tests/motion.test.ts
@@ -3106,7 +3106,7 @@ After this task the real page shows the name forming from scattered dots, vibrat
 - Consumes: everything from Tasks 9–13; `CONTENT`, `startClock`, `initExitLine` (Task 3).
 - Produces: `waitForFont(spec, timeoutMs, fonts?, schedule?) → Promise<'loaded' | 'timeout' | 'unavailable'>`; `hasWebGL2(createCanvas?)`; `class App { constructor({ canvas, params, reduced, seed }); field; params; reduced; start(); stop(); layout(); count; setCount(n); applyParams(); requestCycle(): boolean /* stub until Task 20 */ }`.
 
-- [ ] **Step 1: Write the failing font test** (`tests/fonts.test.ts`)
+- [x] **Step 1: Write the failing font test** (`tests/fonts.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -3142,7 +3142,7 @@ describe('waitForFont', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify failure, then write the boot probes**
+- [x] **Step 2: Run to verify failure, then write the boot probes**
 
 Run: `npx vitest run tests/fonts.test.ts` → FAIL.
 
@@ -3192,7 +3192,7 @@ export function hasWebGL2(createCanvas: () => HTMLCanvasElement = () => document
 
 Run: `npx vitest run tests/fonts.test.ts` → 4 pass.
 
-- [ ] **Step 3: Write `src/app.ts`**
+- [x] **Step 3: Write `src/app.ts`**
 
 ```ts
 import { CONTENT } from './content';
@@ -3365,7 +3365,7 @@ export class App {
 }
 ```
 
-- [ ] **Step 4: Rewrite `src/main.ts`**
+- [x] **Step 4: Rewrite `src/main.ts`**
 
 ```ts
 import { App } from './app';
@@ -3414,7 +3414,7 @@ boot().catch((error: unknown) => {
 });
 ```
 
-- [ ] **Step 5: Typecheck, test, run the dev server**
+- [x] **Step 5: Typecheck, test, run the dev server**
 
 Run: `npm run typecheck && npm test && npm run dev`
 Expected: `tsc` silent, all tests green, dev server on `http://localhost:5173`.
@@ -3450,7 +3450,7 @@ async () => {
 9. Record `window.devicePixelRatio` of the test browser in the report. Zoom a screenshot of one letter at that DPR and note whether individual dots blink or shimmer frame to frame (sub-2 px points can drop out at DPR 1); report what you see — do not change the shader for it.
 10. Budget early: `npm run build`, then `gzip -c dist/assets/*.js | wc -c` must be under 184320 (180 KB, now that `three` is in the bundle) and `ls dist/assets` must show no `.map` files. Report the byte count.
 
-- [ ] **Step 5b: Review fix round 1 (controller ruling after the task review)**
+- [x] **Step 5b: Review fix round 1 (controller ruling after the task review)**
 
 The task review found the spec 4.7 lifecycle missing and several small defects. Make these changes on top of the Step 3/4 code, keeping every anchor later tasks edit at: the `visibilitychange` listener line in `start()`, the removals block in `stop()`, `this.field.setTime(this.simMs);`, `this.field.setViewport(this.vw, this.vh);` in `layout()`, `this.ripple = …` and both `// [Task 20]` markers, and the `// [Task 15]` line in `main.ts`.
 
@@ -3465,7 +3465,7 @@ Re-run: `npm test`, `npm run typecheck`, `npm run build` (no chunk advisory, gzi
 
 Commit the fix round as its own commit: `git add src/app.ts src/engine/sampler.ts src/boot/fonts.ts src/boot/webgl.ts tests/fonts.test.ts tests/webgl.test.ts vite.config.ts` (the Step 6 commit below is the original Task 14 commit).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/boot src/app.ts src/main.ts tests/fonts.test.ts
@@ -3485,7 +3485,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `prepareTweaks(params: Params): (app: App) => void` — applies `localStorage['parsanaji.tweaks']` to `params` immediately, returns the GUI mount.
 
-- [ ] **Step 1: Write `src/tweaks.ts`**
+- [x] **Step 1: Write `src/tweaks.ts`**
 
 ```ts
 import GUI from 'lil-gui';
@@ -3584,7 +3584,7 @@ function mount(params: Params, app: App): GUI {
 }
 ```
 
-- [ ] **Step 2: Wire it in `src/main.ts`** — replace the line `// [Task 15] debug panel loads here, before sampling, so saved tweaks affect N` with:
+- [x] **Step 2: Wire it in `src/main.ts`** — replace the line `// [Task 15] debug panel loads here, before sampling, so saved tweaks affect N` with:
 
 ```ts
   let mountTweaks: ((app: App) => void) | null = null;
@@ -3600,13 +3600,13 @@ and after `app.start();` add:
   mountTweaks?.(app);
 ```
 
-- [ ] **Step 3: Verify dev panel and production exclusion**
+- [x] **Step 3: Verify dev panel and production exclusion**
 
 Run: `npm run typecheck && npm run dev` → open `http://localhost:5173/?debug` with the DevTools MCP: the `parsanaji tweaks` panel appears top-right; change `dotSize` and see dots grow live; change `density` and see the field re-sample; set `cap desktop` below the current N (1440 px wide) and see fewer dots; reload keeps the values; "reset to defaults" clears them.
 
 Run: `npm run build && (grep -il "lil-gui" dist/assets/*.js && echo "FAIL: lil-gui in production" || echo "ok: lil-gui absent")` → `ok: lil-gui absent`. Budget: `gzip -c dist/assets/*.js | wc -c` → under 184320 bytes (180 KB).
 
-- [ ] **Step 4: Commit and deploy a preview**
+- [x] **Step 4: Commit and deploy a preview**
 
 ```bash
 git add src/tweaks.ts src/main.ts
@@ -3619,7 +3619,7 @@ npm run deploy:preview
 
 Expected: `https://preview.parsanaji-com.pages.dev` shows the particle name. Report the URL to the orchestrator for Parsa. Production also updates through the Actions run on `main`; that is intended — slice 2 is strictly better than the static page.
 
-- [ ] **Step 5: Review fix round 1 (controller ruling after the task review)**
+- [x] **Step 5: Review fix round 1 (controller ruling after the task review)**
 
 Spec 4.8 lists `N` and "every morph duration"; spec 3.5 says every time value is exposed. Change only `src/tweaks.ts`:
 
