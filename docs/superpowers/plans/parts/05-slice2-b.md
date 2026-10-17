@@ -676,7 +676,8 @@ After this task the real page shows the name forming from scattered dots, vibrat
 **Files:**
 - Create: `src/boot/fonts.ts`, `src/boot/webgl.ts`, `src/app.ts`
 - Modify: `src/main.ts` (full rewrite)
-- Test: `tests/fonts.test.ts`
+- Test: `tests/fonts.test.ts`, `tests/webgl.test.ts` (fix round 1)
+- Modify (fix round 1): `src/engine/sampler.ts`, `vite.config.ts`
 
 **Interfaces:**
 - Consumes: everything from Tasks 9–13; `CONTENT`, `startClock`, `initExitLine` (Task 3).
@@ -1025,6 +1026,19 @@ async () => {
    Expected at both sizes: `|dxCss|` and `|dyCss|` ≤ 2 (vibration, breath and a passing ripple move the ink box by about a pixel), `widthFrac` about 0.72 at 1440×900 and about 0.86 at 390×844. Paste both JSON results into the report.
 9. Record `window.devicePixelRatio` of the test browser in the report. Zoom a screenshot of one letter at that DPR and note whether individual dots blink or shimmer frame to frame (sub-2 px points can drop out at DPR 1); report what you see — do not change the shader for it.
 10. Budget early: `npm run build`, then `gzip -c dist/assets/*.js | wc -c` must be under 184320 (180 KB, now that `three` is in the bundle) and `ls dist/assets` must show no `.map` files. Report the byte count.
+
+- [ ] **Step 5b: Review fix round 1 (controller ruling after the task review)**
+
+The task review found the spec 4.7 lifecycle missing and several small defects. Make these changes on top of the Step 3/4 code, keeping every anchor later tasks edit at: the `visibilitychange` listener line in `start()`, the removals block in `stop()`, `this.field.setTime(this.simMs);`, `this.field.setViewport(this.vw, this.vh);` in `layout()`, `this.ripple = …` and both `// [Task 20]` markers, and the `// [Task 15]` line in `main.ts`.
+
+1. `src/app.ts`, spec 4.7: move the pause/resume bodies of `onVisibility` into private `pause()` / `resume()` methods (`onVisibility` calls them). In `start()` also listen to `orientationchange` → `this.onResize`, `pagehide` → `pause()`, and `pageshow` → `resume()` when `event.persisted` and `document.visibilityState === 'visible'`; `stop()` removes all of them and also clears `resizeTimer` and resets `lastMs` to -1.
+2. `src/app.ts`, spec 3.7 without a stretched frame: `onResize` updates `vw`/`vh` and calls `this.field.setViewport(window.innerWidth, window.innerHeight)` at once, so the canvas never scales the old buffer during a drag; only the re-sampling (`layout()`) stays behind the 150 ms debounce.
+3. `src/engine/sampler.ts`, spec 3.8 ("on timeout the sampler proceeds with the fallback font stack"): both `ctx.font` strings (in `makeMeasure` and `rasterize`) use the CSS display stack after the family: `"<family>", system-ui, -apple-system, "Segoe UI", sans-serif` (same order as `--font-display` in `styles.css`), built in one small helper so the two strings cannot drift. `waitForFont` keeps the single-family spec. The sampler tests must stay green unchanged.
+4. `src/boot/fonts.ts`: a synchronous throw from `fonts.load` resolves `'timeout'` (wrap the call), so the function truly never rejects. `tests/fonts.test.ts`: `manualTimer` records the `ms` it is given and one test asserts 2000 reaches the scheduler; add a test for the synchronous-throw case.
+5. `src/boot/webgl.ts`: release the probe context after the check (`getExtension('WEBGL_lose_context')?.loseContext()`). New `tests/webgl.test.ts` covers the three branches with fake canvases: context returned → true, `null` → false, `getContext` throws → false.
+6. `vite.config.ts`: `build.chunkSizeWarningLimit: 700` with a one-line comment that the 180 KB gzip budget (Task 15 check) is the real gate — the three chunk otherwise prints Vite's 500 kB advisory on every build and in CI.
+
+Re-run: `npm test`, `npm run typecheck`, `npm run build` (no chunk advisory, gzip budget unchanged), and in the browser: console clean, the name still forms and centres (item 8 JSON at 1440×900), a drag-resize from 1440 to 1000 px wide shows no stretched frame, and a `?nowebgl` load still shows the static page.
 
 - [ ] **Step 6: Commit**
 
