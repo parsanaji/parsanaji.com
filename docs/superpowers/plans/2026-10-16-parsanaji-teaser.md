@@ -2229,7 +2229,8 @@ export function layoutText(text: string, opts: LayoutOptions, measure: MeasureFn
   const targetW = Math.max(1, opts.viewportW * (stacked ? opts.widthFracStacked : opts.widthFracSingle));
   const widestAt100 = Math.max(1e-6, ...lines.map((l) => measure(l, 100, opts.letterSpacingEm)));
   let fontPx = (targetW / widestAt100) * 100;
-  const maxBlockH = Math.max(1, opts.viewportH * opts.maxHeightFrac);
+  // tiny positive floor (not 1 px): a 1 px tall viewport must still get a block no taller than 40 % of it
+  const maxBlockH = Math.max(1e-6, opts.viewportH * opts.maxHeightFrac);
   const linesFactor = opts.lineHeight * lines.length;
   if (fontPx * linesFactor > maxBlockH) fontPx = maxBlockH / linesFactor;
   const lineH = fontPx * opts.lineHeight;
