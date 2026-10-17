@@ -760,7 +760,7 @@ export class App {
     const layoutOpts = { ...this.params.layout, viewportW: this.vw, viewportH: this.vh };
     this.nameSample = sampleText(CONTENT.name, layoutOpts, this.params.raster, createCanvas, measure);
     this.altSample = sampleText(CONTENT.alt, layoutOpts, this.params.raster, createCanvas, measure);
-    this.n = dotCount(this.nameSample.inkedAreaCssPx, this.vw, this.params.density);
+    this.n = dotCount(this.nameSample.inkedAreaCssPx, this.vw, this.params.density, this.params.caps);
     this.upload();
   }
 
@@ -975,6 +975,9 @@ function mount(params: Params, app: App): GUI {
 
   const field = gui.addFolder('field');
   field.add(params, 'density', 0.05, 1, 0.01).onFinishChange(relayout);
+  for (const key of ['desktop', 'tablet', 'phone'] as const) {
+    field.add(params.caps, key, 1000, 120_000, 1000).name(`cap ${key}`).onFinishChange(relayout);
+  }
   field.add(params, 'dotSize', 0.5, 4, 0.1).onChange(live);
   field.add(params, 'alphaScale', 0.1, 1, 0.05).onChange(live);
   field.add(params, 'nearScale', 1, 2.5, 0.05).onChange(live);
@@ -1042,7 +1045,7 @@ and after `app.start();` add:
 
 - [ ] **Step 3: Verify dev panel and production exclusion**
 
-Run: `npm run typecheck && npm run dev` → open `http://localhost:5173/?debug` with the DevTools MCP: the `parsanaji tweaks` panel appears top-right; change `dotSize` and see dots grow live; change `density` and see the field re-sample; reload keeps the values; "reset to defaults" clears them.
+Run: `npm run typecheck && npm run dev` → open `http://localhost:5173/?debug` with the DevTools MCP: the `parsanaji tweaks` panel appears top-right; change `dotSize` and see dots grow live; change `density` and see the field re-sample; set `cap desktop` below the current N (1440 px wide) and see fewer dots; reload keeps the values; "reset to defaults" clears them.
 
 Run: `npm run build && (grep -il "lil-gui" dist/assets/*.js && echo "FAIL: lil-gui in production" || echo "ok: lil-gui absent")` → `ok: lil-gui absent`. Budget: `gzip -c dist/assets/*.js | wc -c` → under 184320 bytes (180 KB).
 

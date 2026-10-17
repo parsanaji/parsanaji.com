@@ -165,11 +165,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/engine/types.ts`, `src/engine/defaults.ts`, `src/engine/quality.ts`
-- Test: `tests/quality.test.ts`
+- Test: `tests/quality.test.ts`, `tests/defaults.test.ts`
 
 **Interfaces:**
-- Produces (`types.ts`): `PHASE` ids, `PhaseId`, `PointerSlot`, `RippleState`, `RIPPLE_OFF`, and the param interfaces `RippleParams`, `MorphTimings`, `PointerParams`, `LayoutParams`, `RasterParams`, `ProbeParams`, `Params`.
-- Produces (`defaults.ts`): `DEFAULTS: Params` (spec 3.2–3.7 numbers) and `cloneParams(p)`.
+- Produces (`types.ts`): `PHASE` ids, `PhaseId`, `PointerSlot`, `RippleState`, `RIPPLE_OFF`, and the param interfaces `CountCaps`, `RippleParams`, `MorphTimings`, `PointerParams`, `LayoutParams`, `RasterParams`, `ProbeParams`, `Params`.
+- Produces (`defaults.ts`): `DEFAULTS: Params` (spec 3.2–3.7 numbers; `caps` is a copy of `COUNT_CAP`) and `cloneParams(p)`.
 - Produces (`quality.ts`): `widthClass(vw) → 'desktop' | 'tablet' | 'phone'`, `COUNT_CAP`, `dotCount(inkedAreaCssPx, vw, density, caps?)`, `capDpr(dpr, max = 2)`, `degradedCount(n, factor = 0.6)`, `class FpsProbe { push(dtMs): 'pending' | 'keep' | 'degrade'; done: boolean }`.
 
 - [ ] **Step 1: Write `src/engine/types.ts`**
@@ -205,6 +205,13 @@ export interface RippleState {
   band: number;
 }
 export const RIPPLE_OFF: RippleState = Object.freeze({ active: false, ox: 0, oy: 0, radius: 0, amplitude: 0, band: 1 });
+
+/** Dot-count caps per viewport width class (spec 3.3); debug-panel tunable. */
+export interface CountCaps {
+  desktop: number;
+  tablet: number;
+  phone: number;
+}
 
 export interface RippleParams {
   intervalMs: number;
@@ -260,6 +267,7 @@ export interface ProbeParams {
 
 export interface Params {
   density: number;
+  caps: CountCaps;
   dotSize: number;
   sizeVarMin: number;
   sizeVarMax: number;
@@ -290,19 +298,21 @@ export interface Params {
 }
 ```
 
-- [ ] **Step 2: Write `src/engine/defaults.ts`** (every number traces to spec 3.2–3.7)
+- [ ] **Step 2: Write `src/engine/defaults.ts`** (every number traces to spec 3.2–3.7; `caps` copies `COUNT_CAP` from `quality.ts`, written in Step 4)
 
 ```ts
+import { COUNT_CAP } from './quality';
 import type { Params } from './types';
 
 export const DEFAULTS: Params = {
   density: 0.3,
+  caps: { ...COUNT_CAP },
   dotSize: 1.6,
   sizeVarMin: 0.75,
   sizeVarMax: 1.25,
   alphaMin: 0.6,
   alphaMax: 1.0,
-  alphaScale: 0.9,
+  alphaScale: 1.0,
   nearScale: 1.3,
   additive: true,
   vibAmp: 0.6,
@@ -347,7 +357,7 @@ export function cloneParams(p: Params): Params {
 }
 ```
 
-- [ ] **Step 3: Write the failing quality tests** (`tests/quality.test.ts`)
+- [ ] **Step 3: Write the failing quality and defaults tests** (`tests/quality.test.ts`, `tests/defaults.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -375,6 +385,12 @@ describe('dotCount', () => {
     expect(dotCount(1_000_000, 1440, 0.3)).toBe(60_000);
     expect(dotCount(1_000_000, 800, 0.3)).toBe(40_000);
     expect(dotCount(1_000_000, 390, 0.3)).toBe(25_000);
+  });
+
+  it('honours injected caps (debug-panel tunable, spec 3.3)', () => {
+    const caps = { desktop: 30_000, tablet: 20_000, phone: 10_000 };
+    expect(dotCount(1_000_000, 1440, 0.3, caps)).toBe(30_000);
+    expect(dotCount(1_000_000, 390, 0.3, caps)).toBe(10_000);
   });
 
   it('never returns less than 1', () => {
@@ -424,9 +440,37 @@ describe('FpsProbe', () => {
 });
 ```
 
+`tests/defaults.test.ts`:
+```ts
+import { describe, expect, it } from 'vitest';
+import { DEFAULTS, cloneParams } from '../src/engine/defaults';
+import { COUNT_CAP } from '../src/engine/quality';
+
+describe('DEFAULTS', () => {
+  it('ships the spec 3.3 caps as a tunable copy of COUNT_CAP', () => {
+    expect(DEFAULTS.caps).toEqual(COUNT_CAP);
+    expect(DEFAULTS.caps).not.toBe(COUNT_CAP);
+  });
+});
+
+describe('cloneParams', () => {
+  it('deep-copies, so debug-panel edits never reach DEFAULTS', () => {
+    const p = cloneParams(DEFAULTS);
+    p.caps.desktop = 1;
+    p.ripple.intervalMs = 1;
+    p.morph.holdMs = 1;
+    p.pointer.lerp = 1;
+    expect(DEFAULTS.caps.desktop).toBe(60_000);
+    expect(DEFAULTS.ripple.intervalMs).toBe(10_000);
+    expect(DEFAULTS.morph.holdMs).toBe(2500);
+    expect(DEFAULTS.pointer.lerp).toBe(0.12);
+  });
+});
+```
+
 - [ ] **Step 4: Run to verify failure, then write `src/engine/quality.ts`**
 
-Run: `npx vitest run tests/quality.test.ts` → FAIL (module not found). Then:
+Run: `npx vitest run tests/quality.test.ts tests/defaults.test.ts` → FAIL (module not found: `quality.ts` does not exist yet, and `defaults.ts` imports it). Then:
 
 ```ts
 export type WidthClass = 'desktop' | 'tablet' | 'phone';
@@ -488,13 +532,13 @@ export class FpsProbe {
 
 - [ ] **Step 5: Run the tests and typecheck**
 
-Run: `npx vitest run tests/quality.test.ts && npm run typecheck`
+Run: `npx vitest run tests/quality.test.ts tests/defaults.test.ts && npm run typecheck`
 Expected: all pass; `tsc` silent.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/engine/types.ts src/engine/defaults.ts src/engine/quality.ts tests/quality.test.ts
+git add src/engine/types.ts src/engine/defaults.ts src/engine/quality.ts tests/quality.test.ts tests/defaults.test.ts
 git commit -m "feat(engine): shared types, shipped defaults and adaptive-quality rules
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
