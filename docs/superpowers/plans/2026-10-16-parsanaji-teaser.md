@@ -3463,6 +3463,8 @@ The task review found the spec 4.7 lifecycle missing and several small defects. 
 
 Re-run: `npm test`, `npm run typecheck`, `npm run build` (no chunk advisory, gzip budget unchanged), and in the browser: console clean, the name still forms and centres (item 8 JSON at 1440×900), a drag-resize from 1440 to 1000 px wide shows no stretched frame, and a `?nowebgl` load still shows the static page.
 
+Commit the fix round as its own commit: `git add src/app.ts src/engine/sampler.ts src/boot/fonts.ts src/boot/webgl.ts tests/fonts.test.ts tests/webgl.test.ts vite.config.ts` (the Step 6 commit below is the original Task 14 commit).
+
 - [ ] **Step 6: Commit**
 
 ```bash
