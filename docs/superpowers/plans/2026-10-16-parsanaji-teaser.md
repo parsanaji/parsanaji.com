@@ -2576,7 +2576,8 @@ void main() {
   if (uRipple.w > 0.0) {
     vec2 dv = pos - uRipple.xy;
     float d = length(dv);
-    float band = exp(-pow((d - uRipple.z) / uRippleBand, 2.0));
+    float k = (d - uRipple.z) / uRippleBand; // pow() with a negative base is undefined in GLSL
+    float band = exp(-k * k);
     pos += (dv / max(d, 0.001)) * band * uRipple.w;
   }
 
@@ -2589,7 +2590,7 @@ void main() {
     vec2 dv = pos - P.xy;
     float d = length(dv);
     if (d >= uRepelRadius) continue;
-    float f = smoothstep(1.0, 0.0, d / uRepelRadius);
+    float f = 1.0 - smoothstep(0.0, 1.0, d / uRepelRadius); // GLSL leaves smoothstep undefined when edge0 >= edge1
     f *= f;
     push += (dv / max(d, 0.001)) * (uRepelRadius * uRepelStrength * f * P.z * (1.0 + P.w));
     near = max(near, f * P.z);
@@ -2606,19 +2607,22 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: Write `src/shaders/field.frag`** (Three.js maps `gl_FragColor` to the GLSL3 output)
+- [ ] **Step 3: Write `src/shaders/field.frag`** (GLSL3: the shader declares its own `out vec4`; three 0.186 defines `pc_fragColor` / `gl_FragColor` only for non-GLSL3 ShaderMaterials)
 
 ```glsl
 in float vAlpha;
 in float vNear;
 
+out vec4 fragColor;
+
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c);
-  float a = smoothstep(0.5, 0.35, d) * vAlpha;
+  // = smoothstep(0.5, 0.35, d) from spec 3.2, written with ascending edges (reversed edges are undefined in GLSL)
+  float a = (1.0 - smoothstep(0.35, 0.5, d)) * vAlpha;
   if (a <= 0.002) discard;
   vec3 col = mix(vec3(0.961), vec3(1.0), vNear); // #f5f5f5, brighter near the pointer
-  gl_FragColor = vec4(col, a);
+  fragColor = vec4(col, a);
 }
 ```
 
@@ -2824,6 +2828,51 @@ export class ParticleField {
 
 Run: `npm run typecheck && npx vite build`
 Expected: `tsc` silent (the `?raw` imports resolve through `vite/client` types); the build succeeds. `three` is not yet imported by `main.ts`, so the chunk is still small; that changes in Task 14.
+
+- [ ] **Step 5b: Prove the shaders compile and draw in a real browser** (nothing is committed from this step)
+
+Start `npm run dev` in the background, open `http://localhost:5173/` in a fresh DevTools MCP page, and run with `evaluate_script` (Vite serves source modules by path in dev):
+
+```js
+async () => {
+  const { ParticleField } = await import('/src/engine/ParticleField.ts');
+  const { DEFAULTS } = await import('/src/engine/defaults.ts');
+  const { mulberry32 } = await import('/src/engine/prng.ts');
+  const run = (phase, t, dur, stagger, reduced) => {
+    const errors = [];
+    const canvas = document.createElement('canvas');
+    const field = new ParticleField(canvas, DEFAULTS, 1);
+    field.renderer.debug.onShaderError = (gl, program, vs, fs) =>
+      errors.push([gl.getShaderInfoLog(vs), gl.getShaderInfoLog(fs), gl.getProgramInfoLog(program)].filter(Boolean).join(' | ') || 'shader error');
+    field.setViewport(400, 200);
+    const n = 2000;
+    const rand = mulberry32(1);
+    const home = new Float32Array(n * 2);
+    const alt = new Float32Array(n * 2);
+    for (let i = 0; i < n * 2; i++) {
+      home[i] = (rand() - 0.5) * (i % 2 ? 180 : 360);
+      alt[i] = (rand() - 0.5) * 100;
+    }
+    field.setTargets(home, alt, rand, DEFAULTS);
+    field.setReduced(reduced);
+    field.setMorph(phase, t, dur, stagger);
+    field.setPointer([{ x: 0, y: 0, strength: 1, vel: 0.5 }]);
+    field.setRipple({ active: true, ox: 0, oy: 0, radius: 60, amplitude: 3, band: 60 });
+    field.render();
+    const gl = field.renderer.getContext();
+    const px = new Uint8Array(400 * 200 * 4);
+    gl.readPixels(0, 0, 400, 200, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    let lit = 0;
+    for (let i = 3; i < px.length; i += 4) if (px[i] > 0) lit++;
+    const out = { phase, reduced, errors, calls: field.renderer.info.render.calls, lit, glError: gl.getError() };
+    field.dispose();
+    return out;
+  };
+  return [run(1, 0, 1, 0, false), run(3, 450, 900, 250, false), run(3, 450, 900, 250, true)];
+}
+```
+
+Expected for all three runs: `errors` empty, `calls` 1, `glError` 0, `lit` > 1000 for the idle run and > 0 for the other two; `list_console_messages` shows no shader errors or warnings. Paste the returned JSON into the report, then stop the dev server.
 
 - [ ] **Step 6: Commit**
 
