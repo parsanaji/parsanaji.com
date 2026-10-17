@@ -3619,6 +3619,17 @@ npm run deploy:preview
 
 Expected: `https://preview.parsanaji-com.pages.dev` shows the particle name. Report the URL to the orchestrator for Parsa. Production also updates through the Actions run on `main`; that is intended — slice 2 is strictly better than the static page.
 
+- [ ] **Step 5: Review fix round 1 (controller ruling after the task review)**
+
+Spec 4.8 lists `N` and "every morph duration"; spec 3.5 says every time value is exposed. Change only `src/tweaks.ts`:
+
+1. A read-only `N` readout in the `field` folder: `field.add(app, 'count').name('N').disable().listen()` (it follows density, caps and resizes; a writable `setCount` control would be lost on the next layout).
+2. Add `'reducedMs'` to the morph key list; add `params.ripple.jitterMs` (0–5000, step 100) and `params.ripple.durationMs` (100–2000, step 50 — never 0, the envelope divides by it) to `idle`, and `params.pointer.parkMs` (100–3000, step 50) to `pointer`, all `.onChange(live)`.
+3. `deepAssign` applies a saved value only when it has the same type as the current one (`typeof`, and never `null`), recurses only object-into-object, and uses `Object.hasOwn` instead of `in`; a corrupt or mistyped `parsanaji.tweaks` can no longer break boot. The `catch` logs one `console.warn` (dev only) instead of staying silent.
+4. `persist` stores only the values that differ from the params as they were before the saved tweaks were applied (snapshot with `structuredClone(params)` at the top of `prepareTweaks`, before `deepAssign`), so a later edit to `defaults.ts` is never shadowed by a stale saved copy. `copy JSON` still copies the full params.
+
+The chrome fade (2 s delay, 600 ms) stays CSS-only (`styles.css` is final; recorded as an accepted deviation). Re-run `npm run typecheck`, `npm test`, `npm run build` (`ok: lil-gui absent`, gzip under 184320), and in the dev server with `?debug`: the `N` readout changes when density changes, the new sliders exist, reload keeps a changed value, `localStorage['parsanaji.tweaks']` holds only the changed keys, and a hand-written `localStorage.setItem('parsanaji.tweaks', '{"caps":null,"dotSize":"big"}')` followed by a reload still boots the particle name. Commit `src/tweaks.ts` as its own commit, push, and confirm the Actions run is green.
+
 ---
 ## Slice 3 — Pointer
 
