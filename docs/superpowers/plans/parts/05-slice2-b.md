@@ -1003,6 +1003,28 @@ Browser verification (Chrome DevTools MCP):
 5. `resize_page` to 390×844: name stacks on two lines, still centred. Back to 1440×900: single line.
 6. `emulate` with `prefers-reduced-motion: reduce` and reload: name appears instantly, no vibration, no ripple.
 7. `http://localhost:5173/?nowebgl` → static page.
+8. Measured centring (guards the sampler's re-centring, which the Node tests cannot see): at 1440×900 and at 390×844, each in a fresh page with `?seed=7`, wait 3 s after load, then run with `evaluate_script` (the callback queued here runs after the app's own frame callback in the same frame, before compositing, so the drawing buffer still holds that frame):
+
+```js
+async () => {
+  const canvas = document.getElementById('field');
+  const gl = canvas.getContext('webgl2');
+  const w = gl.drawingBufferWidth;
+  const h = gl.drawingBufferHeight;
+  const px = new Uint8Array(w * h * 4);
+  await new Promise((resolve) => requestAnimationFrame(() => { gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); resolve(); }));
+  let minX = w, maxX = -1, minY = h, maxY = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 0) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  const dpr = w / canvas.clientWidth;
+  return { dpr: window.devicePixelRatio, bufferDpr: dpr, dxCss: ((minX + maxX + 1) / 2 - w / 2) / dpr, dyCss: ((minY + maxY + 1) / 2 - h / 2) / dpr, widthFrac: (maxX - minX + 1) / w };
+}
+```
+
+   Expected at both sizes: `|dxCss|` and `|dyCss|` ≤ 2 (vibration, breath and a passing ripple move the ink box by about a pixel), `widthFrac` about 0.72 at 1440×900 and about 0.86 at 390×844. Paste both JSON results into the report.
+9. Record `window.devicePixelRatio` of the test browser in the report. Zoom a screenshot of one letter at that DPR and note whether individual dots blink or shimmer frame to frame (sub-2 px points can drop out at DPR 1); report what you see — do not change the shader for it.
+10. Budget early: `npm run build`, then `gzip -c dist/assets/*.js | wc -c` must be under 184320 (180 KB, now that `three` is in the bundle) and `ls dist/assets` must show no `.map` files. Report the byte count.
 
 - [ ] **Step 6: Commit**
 
