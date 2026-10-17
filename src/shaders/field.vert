@@ -45,6 +45,7 @@ void main() {
   float r = mix(uScatter.x, uScatter.y, fract(aSeed * 13.37));
   float rEntry = mix(uEntryScatter.x, uEntryScatter.y, fract(aSeed * 7.77));
   float alpha = aAlpha * uAlphaScale;
+  float fade = 1.0; // reduced-motion crossfade, applied after the near-pointer boost so the pointer cannot undo it
   bool reduced = uReduced > 0.5;
 
   float delayFac = aSeed;
@@ -55,27 +56,30 @@ void main() {
   if (uPhase == 0) {
     pos = reduced ? home : mix(home + dir * rEntry, home, easeOutExpo(local));
   } else if (uPhase == 2) {
-    if (reduced) { pos = home; alpha *= 1.0 - local; }
+    if (reduced) { pos = home; fade = 1.0 - local; }
     else pos = mix(home, home + dir * r, easeInCubic(local));
   } else if (uPhase == 3) {
-    if (reduced) { pos = alt; alpha *= local; }
+    if (reduced) { pos = alt; fade = local; }
     else pos = mix(home + dir * r, alt, easeOutExpo(local));
   } else if (uPhase == 4) {
     pos = alt;
   } else if (uPhase == 5) {
-    if (reduced) { pos = alt; alpha *= 1.0 - local; }
+    if (reduced) { pos = alt; fade = 1.0 - local; }
     else pos = mix(alt, alt + dir * r, easeInCubic(local));
   } else if (uPhase == 6) {
-    if (reduced) { pos = home; alpha *= local; }
+    if (reduced) { pos = home; fade = local; }
     else pos = mix(alt + dir * r, home, easeOutExpo(local));
   }
 
-  // idle life: noise vibration (never per-frame randomness) and breath
-  float tt = uTime * 0.001 * uVibFreq;
-  vec2 vib = vec2(
-    snoise(vec3(home * uVibScale, aSeed * 10.0 + tt)),
-    snoise(vec3(home * uVibScale + 31.7, aSeed * 10.0 + 17.0 + tt))
-  ) * uVibAmp;
+  // idle life: noise vibration (never per-frame randomness) and breath; reduced motion has no vibration (spec 3.5)
+  vec2 vib = vec2(0.0);
+  if (!reduced) {
+    float tt = uTime * 0.001 * uVibFreq;
+    vib = vec2(
+      snoise(vec3(home * uVibScale, aSeed * 10.0 + tt)),
+      snoise(vec3(home * uVibScale + 31.7, aSeed * 10.0 + 17.0 + tt))
+    ) * uVibAmp;
+  }
   pos = (pos + vib) * uBreath;
 
   // ripple: a radial band travelling outward from its origin
@@ -87,9 +91,10 @@ void main() {
     pos += (dv / max(d, 0.001)) * band * uRipple.w;
   }
 
-  // pointer repel: the live pointer plus a decaying trail, stateless
+  // pointer repel: the live pointer plus a decaying trail, stateless; no velocity scaling under reduced motion (spec 3.5)
   vec2 push = vec2(0.0);
   float near = 0.0;
+  float velGain = reduced ? 0.0 : 1.0;
   for (int i = 0; i < 8; i++) {
     vec4 P = uPointer[i];
     if (P.z <= 0.0) continue;
@@ -98,7 +103,7 @@ void main() {
     if (d >= uRepelRadius) continue;
     float f = 1.0 - smoothstep(0.0, 1.0, d / uRepelRadius); // GLSL leaves smoothstep undefined when edge0 >= edge1
     f *= f;
-    push += (dv / max(d, 0.001)) * (uRepelRadius * uRepelStrength * f * P.z * (1.0 + P.w));
+    push += (dv / max(d, 0.001)) * (uRepelRadius * uRepelStrength * f * P.z * (1.0 + P.w * velGain));
     near = max(near, f * P.z);
   }
   float pl = length(push);
@@ -107,7 +112,7 @@ void main() {
   pos += push;
 
   vNear = near;
-  vAlpha = mix(alpha, 1.0, near);
+  vAlpha = mix(alpha, 1.0, near) * fade;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 0.0, 1.0);
   gl_PointSize = uDotSize * uDpr * aSize * mix(1.0, uNearScale, near);
 }
