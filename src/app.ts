@@ -64,13 +64,21 @@ export class App {
     this.running = true;
     this.raf = requestAnimationFrame(this.frame);
     window.addEventListener('resize', this.onResize);
+    window.addEventListener('orientationchange', this.onResize);
+    window.addEventListener('pagehide', this.onPageHide);
+    window.addEventListener('pageshow', this.onPageShow);
     document.addEventListener('visibilitychange', this.onVisibility);
   }
 
   stop(): void {
     this.running = false;
     cancelAnimationFrame(this.raf);
+    window.clearTimeout(this.resizeTimer);
+    this.lastMs = -1;
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('orientationchange', this.onResize);
+    window.removeEventListener('pagehide', this.onPageHide);
+    window.removeEventListener('pageshow', this.onPageShow);
     document.removeEventListener('visibilitychange', this.onVisibility);
   }
 
@@ -148,21 +156,38 @@ export class App {
     return [c[i * 2], c[i * 2 + 1]] as const;
   };
 
+  /** Spec 3.7: the viewport follows at once so the canvas never stretches the old buffer; re-sampling waits 150 ms. */
   private onResize = (): void => {
+    this.vw = window.innerWidth;
+    this.vh = window.innerHeight;
+    this.field.setViewport(window.innerWidth, window.innerHeight);
     window.clearTimeout(this.resizeTimer);
     this.resizeTimer = window.setTimeout(() => this.layout(), 150);
   };
 
+  private pause(): void {
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+  }
+
+  private resume(): void {
+    if (this.running) return;
+    this.running = true;
+    this.lastMs = -1;
+    this.raf = requestAnimationFrame(this.frame);
+  }
+
   private onVisibility = (): void => {
-    if (document.visibilityState === 'hidden') {
-      this.running = false;
-      cancelAnimationFrame(this.raf);
-      return;
-    }
-    if (!this.running) {
-      this.running = true;
-      this.lastMs = -1;
-      this.raf = requestAnimationFrame(this.frame);
-    }
+    if (document.visibilityState === 'hidden') this.pause();
+    else this.resume();
+  };
+
+  /** Spec 4.7: stop the loop on pagehide so a bfcache restore starts clean. */
+  private onPageHide = (): void => {
+    this.pause();
+  };
+
+  private onPageShow = (event: PageTransitionEvent): void => {
+    if (event.persisted && document.visibilityState === 'visible') this.resume();
   };
 }

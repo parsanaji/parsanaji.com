@@ -20,9 +20,14 @@ export function waitForFont(
       resolve(result);
     };
     schedule(() => finish('timeout'), timeoutMs);
-    fonts.load(spec).then(
-      () => finish('loaded'),
-      () => finish('timeout'),
-    );
+    try {
+      fonts.load(spec).then(
+        () => finish('loaded'),
+        () => finish('timeout'),
+      );
+    } catch {
+      // FontFaceSet.load throws synchronously on an unparsable spec; never reject
+      finish('timeout');
+    }
   });
 }

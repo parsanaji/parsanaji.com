@@ -87,12 +87,17 @@ export function layoutText(text: string, opts: LayoutOptions, measure: MeasureFn
   return { fontPx, stacked, lines: boxes, blockW, blockH };
 }
 
+/** The family plus the CSS `--font-display` fallbacks, so a font timeout still samples (spec 3.8). */
+function canvasFont(raster: Pick<RasterParams, 'fontFamily' | 'fontWeight'>, fontPx: number): string {
+  return `${raster.fontWeight} ${fontPx}px "${raster.fontFamily}", system-ui, -apple-system, "Segoe UI", sans-serif`;
+}
+
 /** A measure function backed by a (possibly offscreen) 2D canvas. */
 export function makeMeasure(canvas: Canvas2DLike, raster: Pick<RasterParams, 'fontFamily' | 'fontWeight'>): MeasureFn {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2d context unavailable');
   return (text, fontPx, letterSpacingEm) => {
-    ctx.font = `${raster.fontWeight} ${fontPx}px "${raster.fontFamily}"`;
+    ctx.font = canvasFont(raster, fontPx);
     if ('letterSpacing' in ctx) {
       ctx.letterSpacing = `${letterSpacingEm * fontPx}px`;
       return ctx.measureText(text).width;
@@ -127,7 +132,7 @@ export function rasterize(layout: Layout, raster: RasterParams, letterSpacingEm:
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = '#ffffff';
   ctx.textBaseline = 'middle';
-  ctx.font = `${raster.fontWeight} ${fontPx}px "${raster.fontFamily}"`;
+  ctx.font = canvasFont(raster, fontPx);
   const native = 'letterSpacing' in ctx;
   if (native) ctx.letterSpacing = `${spacing}px`;
   for (const line of layout.lines) {

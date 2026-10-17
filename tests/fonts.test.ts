@@ -3,7 +3,15 @@ import { waitForFont } from '../src/boot/fonts';
 
 const manualTimer = () => {
   const queue: (() => void)[] = [];
-  return { schedule: (fn: () => void) => void queue.push(fn), fire: () => queue.splice(0).forEach((fn) => fn()) };
+  const delays: number[] = [];
+  return {
+    schedule: (fn: () => void, ms: number) => {
+      queue.push(fn);
+      delays.push(ms);
+    },
+    delays,
+    fire: () => queue.splice(0).forEach((fn) => fn()),
+  };
 };
 
 describe('waitForFont', () => {
@@ -16,6 +24,7 @@ describe('waitForFont', () => {
   it('resolves timeout when the font never loads', async () => {
     const t = manualTimer();
     const pending = waitForFont('900 10px "Geist Sans"', 2000, { load: () => new Promise(() => {}) }, t.schedule);
+    expect(t.delays).toEqual([2000]);
     t.fire();
     expect(await pending).toBe('timeout');
   });
@@ -23,6 +32,16 @@ describe('waitForFont', () => {
   it('treats a rejected load as a timeout, not an exception', async () => {
     const t = manualTimer();
     expect(await waitForFont('900 10px "Geist Sans"', 2000, { load: () => Promise.reject(new Error('nope')) }, t.schedule)).toBe('timeout');
+  });
+
+  it('treats a synchronous throw from load as a timeout, not an exception', async () => {
+    const t = manualTimer();
+    const fonts = {
+      load: (): Promise<unknown> => {
+        throw new SyntaxError('bad font spec');
+      },
+    };
+    expect(await waitForFont('900 10px "Geist Sans"', 2000, fonts, t.schedule)).toBe('timeout');
   });
 
   it('reports unavailable without a FontFaceSet', async () => {
