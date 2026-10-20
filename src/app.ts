@@ -77,6 +77,7 @@ export class App implements LifecycleTarget {
   private ended = false;                                          // set when fail() or dispose() runs the unbinds
   private pinnedMs: number | null = null;                         // __pn.setTime (P4)
   private forcedE: number | null = null;                          // __pn.setE (P4)
+  private idling = false; // 3.6.4: the last frame returned idle; wakeIfIdle() restarts the loop
 
   private constructor(o: AppOptions, renderer: DitherRenderer) {
     this.o = o;
@@ -105,6 +106,7 @@ export class App implements LifecycleTarget {
       app.unbinds.push(bindLifecycle(app, { win: o.win, doc: o.doc, canvas: o.canvas })); // P3
       app.bindPointer();
       app.loop.start();
+      app.beginReducedMotion(); // 3.3.6.3, 3.6.4
       app.beginEntry(); // 4.7.4 steps 3–4
       return app;
     } catch {
@@ -127,6 +129,7 @@ export class App implements LifecycleTarget {
       this.tween.set(c);
     }
     this.loop.wake();
+    this.wakeIfIdle(); // 4.6.6: under reduced motion the loop is woken until the tween ends
   }
 
   /** P11: ignored until Task 20 adds the Konami machine. */
@@ -188,6 +191,7 @@ export class App implements LifecycleTarget {
   }
 
   resume(): void {
+    this.idling = false; // the restarted loop schedules its own frame
     if (this.disposed) return;
     if (this.renderer.lost) {
       this.armRestore(); // 3.7.5: a bfcache restore with a lost context waits for webglcontextrestored
@@ -201,6 +205,7 @@ export class App implements LifecycleTarget {
     this.regrid(deviceBox);
     this.redrawNow(); // 12.11: the resized (cleared) backing store never reaches the compositor
     this.loop.wake();
+    this.wakeIfIdle(); // 3.6.4: a resize renders one frame at the new size
   }
 
   /**
@@ -221,11 +226,18 @@ export class App implements LifecycleTarget {
 
   dprChanged(): void {
     this.resize(null);
+    this.wakeIfIdle(); // 3.6.4: a resize renders one frame at the new size
   }
 
-  /** Task 19 adds the reduced-motion behaviour; slice 2 only tracks the flag. */
+  /** 3.6.4, 11.25: turning reduced motion on freezes the current τ (no jump), skips a running entry, clears rings. */
   reducedChanged(r: boolean): void {
     this.reduced = r;
+    if (r) {
+      this.skipEntry(); // 3.4.9 trigger
+      this.ripples.clear(); // 3.3.8: rings are off under reduced motion
+      this.probe = null; // 3.7.9: the probe never runs under reduced motion
+    }
+    this.wakeIfIdle(); // on: render the frozen still; off: restart the continuous loop
   }
 
   contextLost(): void {
@@ -275,7 +287,7 @@ export class App implements LifecycleTarget {
       }
       if (!this.frozen) {
         this.simMs += dtMs;
-        this.tau += (dtMs / 1000) * effectiveIntensity(this.params);
+        if (!this.reduced) this.tau += (dtMs / 1000) * effectiveIntensity(this.params); // 3.3.6.3: τ frozen under reduced motion
       }
       this.pointer.tick(dtMs);
       const w = this.rect.width;
@@ -291,7 +303,7 @@ export class App implements LifecycleTarget {
       const p = this.params;
       const inputs: FrameInputs = {
         z: flowZ(this.tau, 1, this.zBuf),
-        breath: breathScale(this.simMs, p.breath.amp, p.breath.periodMs),
+        breath: this.reduced ? 1 : breathScale(this.simMs, p.breath.amp, p.breath.periodMs), // 3.3.9
         center: [w / 2, h / 2],
         pointer: {
           x: this.pointer.x,
@@ -340,10 +352,15 @@ export class App implements LifecycleTarget {
     this.startProbe(); // 3.7.9: first real frame without an entry
   }
 
-  /** Spec 4.4.3 step 6: only reduced motion renders on demand; Task 19 adds the 3.6.4 settled condition. */
+  /**
+   * 3.6.4: on-demand rendering. Idle once the pointer is settled and no colour tween, Konami (or entry
+   * skip) or mask re-raster is pending. Called once per frame by frame()'s return.
+   */
   private idle(): boolean {
-    if (!this.reduced) return false;
-    return false;
+    const idle =
+      this.reduced && this.programsReady && this.pointer.settled && !this.tween.active && !this.maskBusy() && this.maskTimer === null;
+    this.idling = idle;
+    return idle;
   }
 
   /** Spec 3.7.1: measure the canvas box, size the grid, resize the backing store and target, cache the rect. */
@@ -364,6 +381,7 @@ export class App implements LifecycleTarget {
 
   /** Spec 3.3.8: primary button, outside interactive elements and dialogs, inside the canvas rect (11.26). */
   private spawnAllowed(e: PointerEvent): boolean {
+    if (this.reduced) return false; // 3.3.8, 3.6.4: no rings under reduced motion
     if (!e.isPrimary || e.button !== 0) return false;
     const target = e.target as Element | null;
     if (target && typeof target.closest === 'function' && target.closest(NO_RIPPLE)) return false;
@@ -554,6 +572,7 @@ export class App implements LifecycleTarget {
     this.maskTimer = setTimeout(() => {
       this.maskTimer = null;
       if (this.maskKind !== null) this.uploadMask(this.maskKind);
+      this.wakeIfIdle();
     }, this.params.boot.resizeDebounceMs);
   }
 
@@ -569,7 +588,7 @@ export class App implements LifecycleTarget {
 
   /** 3.7.9: 60 frames from the entry's done, or from the first real frame without an entry; once per session. */
   private startProbe(): void {
-    if (this.probeStarted) return;
+    if (this.probeStarted || this.reduced) return; // 3.7.9, 11.30: never under reduced motion
     this.probeStarted = true;
     this.probe = new FpsProbe(this.params.probe.frames, this.params.probe.thresholdFps);
   }
@@ -587,10 +606,36 @@ export class App implements LifecycleTarget {
   /** P4: __pn.setTime(ms); null releases. Takes effect on the next frame. */
   private pinEntry(ms: number | null): void {
     this.pinnedMs = ms === null || !Number.isFinite(ms) ? null : Math.max(0, ms);
+    this.wakeIfIdle();
   }
 
   /** P4: __pn.setE(e) while a mask is uploaded; null releases. */
   private forceE(e: number | null): void {
     this.forcedE = e === null || !Number.isFinite(e) ? null : Math.min(1, Math.max(0, e));
+    this.wakeIfIdle();
+  }
+
+  /** 3.3.6.3: the reduced-motion still is τ = staticTimeS (the OG still); pointer input wakes the on-demand loop (3.6.4). */
+  private beginReducedMotion(): void {
+    if (this.reduced) this.tau = this.params.staticTimeS;
+    const win = this.o.win;
+    const root = this.o.doc.documentElement;
+    const wake = (): void => this.wakeIfIdle();
+    const types = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel'] as const;
+    for (const type of types) win.addEventListener(type, wake, { passive: true });
+    win.addEventListener('blur', wake);
+    root.addEventListener('pointerleave', wake, { passive: true });
+    this.unbinds.push(() => {
+      for (const type of types) win.removeEventListener(type, wake);
+      win.removeEventListener('blur', wake);
+      root.removeEventListener('pointerleave', wake);
+    });
+  }
+
+  /** Restarts an idle loop (one frame, then idle() decides again); a no-op while frames are running. */
+  private wakeIfIdle(): void {
+    if (!this.idling) return;
+    this.idling = false;
+    this.loop.wake();
   }
 }
