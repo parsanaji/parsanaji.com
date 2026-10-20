@@ -284,7 +284,7 @@ The page has two decision moments: stay or bounce in the first three seconds, th
 | toggle word on its chip (alpha 0.94 dark, 0.95 light), minimum over the four tiers: `--fg` / `--accent-2` | 15.13 / 5.04 | 14.87 / 4.87 | ≥ 4.5 (computed while writing this spec, same WCAG method as Appendix B) |
 
   - **3.2.5.1** Placement rule: `--accent-2` measures 4.06–4.51 over a bright cell at the 0.86 stop, so the status line and the links row stay in the solid scrim zone (3.1.10.2). This is a placement rule, not a colour change.
-- **3.2.6 Theme crossfade (R7).** Switching looks crossfades the CSS colour tokens and the field colour uniforms together over 300 ms, linear, in gamma-encoded sRGB (4.6.4–4.6.6).
+- **3.2.6 Theme crossfade (R7).** Switching looks crossfades the CSS colour tokens and the field colour uniforms together over 300 ms, linear, in gamma-encoded sRGB (4.6.4–4.6.6). The field's colour tween starts on the frame after the toggle, so it matches the CSS transition; a press inside a running crossfade behaves like an interrupted CSS transition, starting a new 300 ms tween from the colours on screen at that frame, never from the previous target (12.4).
 - **3.2.7 Favicon colours.** The SVG favicon mirrors the browser's scheme with its own `prefers-color-scheme` style (ledger ruling): light default edge `#3b5df0`, tile `#f2f6fe`, glyph `#071348`; dark tile `#050a22`, glyph `#e8eeff`, same edge. The PNG fallbacks use the dark variant (4.10.6).
 - **3.2.8 OG colours.** Background `#050a22`; field tiers `#3b5df0`, `#8db0ff`, `#e8eeff`; name `#e8eeff`; tagline and domain `#7993da` (Appendix B §5.2).
 - **3.2.9 `theme-color` and `color-scheme`.** `<meta name="color-scheme" content="light dark">`; `<meta name="theme-color" content="#f2f6fe" media="(prefers-color-scheme: light)">`; `<meta name="theme-color" content="#050a22" media="(prefers-color-scheme: dark)">`. When the toggle forces a look, the theme module sets both metas' `content` to the computed `--theme-color`; returning to "system" restores the two original values (Appendix B §5.3).
@@ -429,11 +429,11 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
 - **3.4.10 Reduced motion.** `theme-boot.js` never sets `data-entry`, `main.ts` never arms, and the layout is instant with a static field (3.6.4).
 - **3.4.11 Konami replay (R12c).** The Konami code (ArrowUp ArrowUp ArrowDown ArrowDown ArrowLeft ArrowRight ArrowLeft ArrowRight b a) makes the field form `nice.` with the same pipeline and a different mask:
   - timings: gather 900 ms, hold 1500 ms, dissolve 800 ms (3200 ms in total); no `scrim`, `reveal` or `cleanup` events; the rail stays visible;
-  - ignored while the entry or another Konami is running, and when the field is not running (fallback);
+  - ignored while the entry or another Konami is running, when the field is not running (fallback), and when the scrim leaves no clear field (mask box width 0: rail windows about 720–790 px wide; 12.7);
   - mask box, rail layout: `{ x: scrimRight, y: 0, w: fieldCssW − scrimRight, h: fieldCssH }`, where `scrimRight = scrim.getBoundingClientRect().right` (the point where the scrim reaches alpha 0), measured at trigger time; at 1440×900 this is x 950–1440 and a 137 px "nice.";
   - mask box, band layout: the whole band; the layout is read at trigger time as `matchMedia(BAND_QUERY).matches`;
   - same font rule as 3.4.6 (text `nice.`, 700);
-  - the detector listens to `keydown` on `document`; events with Ctrl, Meta or Alt held and auto-repeat events are ignored (they neither advance nor reset the sequence); `b` and `a` match in either case; any other key resets the sequence, and an overlapping prefix (`↑ ↑ ↑ ↓ ↓ …`) still matches;
+  - the detector listens to `keydown` on `document`; events with Ctrl, Meta or Alt held and auto-repeat events are ignored (they neither advance nor reset the sequence), and so does a keydown without a string `key` (a synthetic event; 12.7); `b` and `a` match in either case; any other key resets the sequence, and an overlapping prefix (`↑ ↑ ↑ ↓ ↓ …`) still matches;
   - under reduced motion `e` jumps 0 → 1, holds 1500 ms, and jumps back to 0, with no gather or dissolve.
 
 ### 3.5 Interactions and details
@@ -479,7 +479,7 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
 - **3.5.12 Links.** `github` is `<a class="lnk" href="https://github.com/parsanaji" rel="me" data-link="github">`. LinkedIn is absent until 3.1.12. All links open in the same tab.
 - **3.5.13 Clock (R9).** The footer time is `America/Los_Angeles`, 12-hour, written as `2:36 PM PDT`: hour without a leading zero, two-digit minute, an ASCII space, `AM` or `PM`, an ASCII space, the short zone name (`PDT` or `PST`). It is built from `Intl.DateTimeFormat('en-US', …).formatToParts`, never from `format`, because ICU 72+ inserts U+202F before AM/PM, which is not in the font subset.
   - The `<time>` element's `datetime` attribute is the 24-hour local time, for example `14:36`.
-  - The first write happens at boot; then `[data-clock]` loses `hidden`. Each later write is scheduled `msToNextMinute(now) + 25` ms ahead, so the text changes within 25 ms after each minute boundary. A `visibilitychange` to visible rewrites at once and re-arms the timer.
+  - The first write happens at boot; then `[data-clock]` loses `hidden`. Each later write is scheduled `msToNextMinute(now) + 25` ms ahead, so the footer time changes between 25 and 100 ms after the minute boundary (12.1). A `visibilitychange` to visible rewrites at once and re-arms the timer.
   - Without JS the footer reads `Irvine, CA` only. The clock is never a live region.
 
 ### 3.6 Fallbacks (R13)
@@ -518,7 +518,7 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
 ### 3.7 Resize, orientation, visibility and bfcache (house rule kept: teaser spec 4.7, adapted per Appendix A §6)
 
 - **3.7.1 Resize and orientation.** A `ResizeObserver` on the canvas drives every size change (window resize, orientation, the rail/band switch, the band height). Its callback, in the same task:
-  - reads the CSS size and, when available and the raw DPR is 2 or less, `devicePixelContentBoxSize` for the exact device size; otherwise `round(cssW × dpr)` and `round(cssH × dpr)`;
+  - reads the CSS size and, when available, the raw DPR is 2 or less and it agrees with `cssW × dpr` and `cssH × dpr` to within 1 device px (12.5), `devicePixelContentBoxSize` for the exact device size; otherwise `round(cssW × dpr)` and `round(cssH × dpr)`;
   - sets `canvas.width` and `canvas.height`, so no frame is ever stretched;
   - recomputes the grid (3.3.2) and recreates the surface target only when `cols` or `rows` changed;
   - keeps the sim time, τ, the entry phase and the rings.
@@ -975,7 +975,7 @@ export const DEFAULT_FIELD: FieldParams = {
 
 - **4.10.1 Run.** By hand with `npm run og`; outputs are committed. It is not part of `npm run build`, so CI never depends on harfbuzz or wasm. Deterministic for fixed inputs and a fixed sharp version.
 - **4.10.2 Shared math.** It imports `tierGrid` from `../src/field/surface.ts` (Node ≥ 22.18 strips the types; `surface.ts` has no imports and only erasable TypeScript). No JS twin of the math exists.
-- **4.10.3 Field.** A 200 × 105 cell grid with `CELL = 6` CSS px, τ = 12 s, intensity 1, plus one static Shockwave ring `{ x: 900, y: 360, radius: 135, amp: 0.975, sigma: 40, gain: 0.9 }` (sp = 25, age 0.6 s) so field-3 sparkle appears. Tiers map to `#050a22`, `#3b5df0`, `#8db0ff`, `#e8eeff`. The raw RGBA buffer is upscaled exactly 6× with `sharp(raw).resize(…, { kernel: 'nearest' })` and cropped to 1200 × 630.
+- **4.10.3 Field.** A 200 × 105 cell grid with `CELL = 6` CSS px, τ = 12 s, intensity 1, with no Shockwave ring: the still is the name, the tagline, the domain and the plain field band (12.2). Tiers map to `#050a22`, `#3b5df0`, `#8db0ff`, `#e8eeff`. The raw RGBA buffer is upscaled exactly 6× with `sharp(raw).resize(…, { kernel: 'nearest' })` and cropped to 1200 × 630.
 - **4.10.4 Scrim.** An SVG `linearGradient` (x1 0 → x2 1) over x 0–920 in `#050a22` with stop opacities 1 at x 0, 1 at x 384, 0.86 at x 704, 0.70 at x 758, 0.42 at x 812, 0.16 at x 866 and 0 at x 920. This is the page rule (3.1.10) applied to the OG text column, whose widest line (the name) ends at x 696.
 - **4.10.5 Text as outlines.** `fontverter.convert(woff2, 'sfnt')`, then harfbuzzjs (Blob → Face → Font, `Buffer.addText`, `guessSegmentProperties`, `shape`, positions, `font.glyphToPath`). Each glyph becomes `<path transform="translate(x, baseline) scale(k, −k)">` with `k = size / 1000`. librsvg renders paths only, so no system font or fontconfig is involved. Fonts are the full `scripts/fonts-src/JetBrainsMono-Bold.woff2` and `-Regular.woff2`. Content:
   - `Parsa Naji`, Bold, 104 px, `#e8eeff`, x 72, baseline 300;
@@ -1007,7 +1007,7 @@ export const DEFAULT_FIELD: FieldParams = {
 ### 4.12 Debug panel and live tunables
 
 - **4.12.1 Availability.** `const PN_DEBUG = import.meta.env.DEV || import.meta.env.VITE_PN_DEBUG === '1'`. The CI build step sets `VITE_PN_DEBUG` to `1` on every branch except `main` and to `0` on `main` (7.3.2). So the panel exists on the dev server and on preview builds behind `?debug`, and never in the production build, where the constant folds to `false` and Rolldown drops the code.
-- **4.12.2 Pattern.** `prepareTweaks(params)` applies saved values before the first frame and returns `mount(app)`. Storage key `pn.tweaks`; only changed keys are stored (`deepAssign` and `diff`, kept). `lil-gui` loads only through the dynamic import, with `new GUI({ injectStyles: false, title: 'parsanaji tweaks', width: 320 })` and `import 'lil-gui/dist/lil-gui.css'`, so the panel's CSS arrives as a same-origin stylesheet the CSP allows. On preview builds the panel logs nothing at warning or error level.
+- **4.12.2 Pattern.** `prepareTweaks(params)` applies saved values before the first frame and returns `mount(app)`. Storage key `pn.tweaks`; only changed keys are stored (`deepAssign` and `diff`, kept). `lil-gui` loads only through the dynamic import, with `new GUI({ injectStyles: false, title: 'parsanaji tweaks', width: 320 })` and `import '../node_modules/lil-gui/dist/lil-gui.css'` (a relative path: lil-gui's `exports` map does not export the file; 12.3), so the panel's CSS arrives as a same-origin stylesheet the CSP allows. On preview builds the panel logs nothing at warning or error level.
 - **4.12.3 Live tunables** (folder: control, range, step). Changes apply on the next frame; cell and density changes regrid.
   - `cells`: density (select sparse / medium / dense); `cell.k` 0.001–0.008, 0.0001; `cell.minCss` 1–6, 0.5; `cell.maxCss` 2–12, 0.5.
   - `surface`: intensity (select subtle / medium / lively); `flowSpeed` 0–3, 0.05; `warpScalePx` 80–600, 10; `mainScalePx` 60–400, 5; `warpAmp` 0–6, 0.1; `level` 0–0.6, 0.01; `gain` 0.5–4, 0.05.
@@ -1071,8 +1071,8 @@ export const DEFAULT_FIELD: FieldParams = {
 | 6.1.7 | FCP, entry path | ≤ 1.0 s (the first contentful paint is the first visible field frame at the entry's t = 0) | same trace setup |
 | 6.1.8 | rail fully visible, entry path | ≤ 3.0 s after the entry's t = 0 (designed: 2.98 s) | filmstrip and `html` attributes; every `[data-reveal]` at computed opacity 1 |
 | 6.1.9 | CLS | 0 | Lighthouse and trace |
-| 6.1.10 | TBT | < 100 ms | Lighthouse |
-| 6.1.11 | Lighthouse | Accessibility, Best Practices, SEO ≥ 95 on both paths; Performance ≥ 95 on `?noentry`; Performance on the entry path recorded, not gated | `lighthouse_audit` mobile and desktop on the preview URL |
+| 6.1.10 | TBT | < 100 ms | Lighthouse CLI `npx --yes lighthouse@13.5.0`, median of 3 runs (12.6) |
+| 6.1.11 | Lighthouse | Accessibility, Best Practices, SEO ≥ 95 on both paths; Performance ≥ 95 on `?noentry`; Performance on the entry path recorded, not gated | mobile and desktop: `lighthouse_audit` for Accessibility and Best Practices on the preview URL; Performance via the Lighthouse CLI `npx --yes lighthouse@13.5.0` on the preview URL, median of 3 runs; SEO on the local production build (`npm run build` + `npm run preview`) because previews send `x-robots-tag: noindex` (12.6) |
 | 6.1.12 | frame rate | 60 fps on Parsa's PC (RTX 2080 SUPER, Chrome): mean frame interval ≤ 16.7 ms over 10 s of pointer movement, no long task over 50 ms after the entry | 8.2.3 |
 | 6.1.13 | GPU time | ≤ 2 ms median per frame, both passes, at 1440×900 | `__pn.gpuTime(60)` |
 | 6.1.14 | console | zero errors and zero warnings in production and on the preview at 1440×900, 1280×720 and 390×844, dark and light | 8.2.1 |
@@ -1194,7 +1194,7 @@ Use `emulate` for viewports (it reaches 390×844×3 mobile with touch; `resize_p
 - **8.2.9 Hidden at load.** `new_page` in the background, wait 3 s, `select_page`: the entry starts only now (filmstrip), and no fallback fired.
 - **8.2.10 DPR.** 1440×900 at ×1, ×1.25, ×1.5 and ×2: `__pn.grid()` reports an integer `cellDev`; a screenshot column histogram over 64 cells shows every on-run is a multiple of `cellDev` (no moiré).
 - **8.2.11 Interactions.** Hover and focus brackets with unchanged link rects; "say hi" copy shows `copied` for 1.2 s and the live region text; a denied clipboard (init script making `writeText` reject) navigates to `mailto:`; `g`, `e`, `?`, `Escape` behave as 3.5.4; Tab order as 3.5.11; Tab during the entry skips it; the Konami code forms `nice.` right of the scrim; a click on the name scrambles and settles on `Parsa Naji`; the console shows exactly the line of 3.5.7.
-- **8.2.12 Lighthouse.** `lighthouse_audit` mobile and desktop on the preview URL and on `?noentry`: the scores and metrics of 6.1.9–6.1.11.
+- **8.2.12 Lighthouse.** Mobile and desktop on the preview URL and on `?noentry`: `lighthouse_audit` for Accessibility, Best Practices and SEO, and the Lighthouse CLI `npx --yes lighthouse@13.5.0` for Performance, TBT, LCP, FCP and CLS (median of 3 runs); SEO is gated on the local production build because previews send `x-robots-tag: noindex` (12.6): the scores and metrics of 6.1.9–6.1.11.
 - **8.2.13 Fit.** At 1280×720, 1366×768, 1440×900, 1920×1080 and 2560×1440: `scrollingElement.scrollHeight === clientHeight`; the right edge of every text rect in the rail (Range client rects) is at or left of R; the links, status and footer right edges are left of S. At 1280×600, 1280×599, 1280×519 and 1280×470: the collapse steps of 3.1.11. At 768×1024 and 390×844: the band layout, the footer resting 24 px above the fade at the end of the scroll.
 - **8.2.14 Bundle.** 6.1.1 and 6.1.2 numbers recorded.
 
@@ -1325,3 +1325,17 @@ Each line: what, why, cost if wrong.
 - **11.29** The console line text is `%cParsa Naji — say hi: info@parsanaji.com` in 700 weight `#3b5df0`. Why: R12d fixes only "one styled line with the email". Cost if wrong: one string.
 - **11.30** The FPS probe starts at the first real frame when no entry plays, and never runs under reduced motion. Why: Appendix A only defined the entry path, and an on-demand loop cannot be measured. Cost if wrong: one condition.
 - **11.31** The mask's fallback metrics (no `actualBoundingBox*`) are ascent 0.73 × size and descent 0. Why: Appendix A required a fallback without a number; 0.73 is JetBrains Mono's cap height. Cost if wrong: one constant, test-only in practice.
+
+---
+
+## 12. Amendments during planning
+
+Applied while the implementation plan was assembled (plan `docs/superpowers/plans/2026-10-19-parsanaji-resume-screen.md`, "Index amendments (applied)"; ledger `.superpowers/sdd/2026-10-19-parsanaji-resume-screen/progress.md`). One line each: section, old → new, ruling.
+
+- **12.1** 3.5.13 (clock): "the text changes within 25 ms after each minute boundary" → "the footer time changes between 25 and 100 ms after the minute boundary". Ruling: ledger 2026-10-19 19:29 (the write is scheduled 25 ms after the minute, so the old wording was unsatisfiable; measured 39 ms); plan A9.
+- **12.2** 4.10.3 (OG ring): "plus one static Shockwave ring `{ x: 900, y: 360, radius: 135, amp: 0.975, sigma: 40, gain: 0.9 }` (sp = 25, age 0.6 s) so field-3 sparkle appears" → "with no Shockwave ring: the still is the name, the tagline, the domain and the plain field band". Ruling: ledger 2026-10-19 19:29 lowered the amp to 0.6; the controller's ruling after plan assembly removed the ring (even amp 0.4 renders as solid white blobs); plan A10.
+- **12.3** 4.12.2 (panel stylesheet): `import 'lil-gui/dist/lil-gui.css'` → `import '../node_modules/lil-gui/dist/lil-gui.css'`. Ruling: ledger 2026-10-19 19:36, slice-2 amendment A1 (lil-gui 0.21.0's `exports` map does not export the file, so the bare path fails the build).
+- **12.4** 3.2.6 (theme crossfade): adds "The field's colour tween starts on the frame after the toggle, so it matches the CSS transition; a press inside a running crossfade behaves like an interrupted CSS transition, starting a new 300 ms tween from the colours on screen at that frame, never from the previous target." Rulings: ledger 2026-10-19 19:36, slice-2 amendment A3 (a tween started in the click handler ran one frame ahead of `--bg`, 4/255 off at 150 ms); the controller's ruling after plan assembly on a press mid-crossfade, plan A15.
+- **12.5** 3.7.1 (the sizing rule 4.5.10 cites; `computeGrid` in 4.3): "when available and the raw DPR is 2 or less, `devicePixelContentBoxSize`" → "when available, the raw DPR is 2 or less and it agrees with `cssW × dpr` and `cssH × dpr` to within 1 device px, `devicePixelContentBoxSize`". Ruling: ledger 2026-10-19 19:36, slice-2 amendment A2 (DevTools device-scale emulation reports the physical box, which would stretch every cell).
+- **12.6** 6.1.10, 6.1.11 and 8.2.12 (Lighthouse): "`lighthouse_audit` … on the preview URL" → `lighthouse_audit` for Accessibility, Best Practices and SEO, the Lighthouse CLI `npx --yes lighthouse@13.5.0` for Performance and TBT (median of 3 runs), and SEO measured on the local production build because Pages previews send `x-robots-tag: noindex`. Ruling: ledger 2026-10-19 18:59, slice-4 amendments A5 and A6.
+- **12.7** 3.4.11 (Konami): adds "ignored when the scrim leaves no clear field (mask box width 0: rail windows about 720–790 px wide)" and "a keydown without a string `key` (a synthetic event) neither advances nor resets the sequence". Ruling: assembler, plan A11 (the slice-2 open item: an empty box would dim the field around no text) and A12 (Review Focus: such an event would otherwise throw in the listener).
