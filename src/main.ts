@@ -2,7 +2,9 @@
 import { App } from './app';
 import { CONTENT } from './content';
 import { seedFromLocation } from './core/prng';
+import { greet } from './eggs/greeting';
 import { createKonami } from './eggs/konami';
+import { initScramble } from './eggs/scramble';
 import { initShortcuts } from './eggs/shortcuts';
 import { DEFAULT_FIELD, cloneField } from './field/params';
 import { initTheme } from './theme/themeController';
@@ -51,6 +53,7 @@ function takeEntryControl(doc: Document, nowMs: number): boolean {
 }
 
 async function boot(): Promise<void> {
+  greet(); // 3.5.7, 4.7.1
   const doc = document;
   const win = window;
   const query = new URLSearchParams(win.location.search);
@@ -100,6 +103,15 @@ async function boot(): Promise<void> {
     },
     { linkedin },
   );
+  const nameEl = doc.querySelector<HTMLElement>('[data-name]');
+  if (nameEl) {
+    initScramble(nameEl, CONTENT.name, {
+      durMs: params.scramble.durMs,
+      stepMs: params.scramble.stepMs,
+      seed: seedFromLocation(win.location.search),
+      reduced: () => win.matchMedia('(prefers-reduced-motion: reduce)').matches, // 3.6.4: read per click
+    });
+  }
   const konami = createKonami(() => app?.konami()); // 3.4.11; app is null on the static fallback
   doc.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; // these neither advance nor reset the sequence
