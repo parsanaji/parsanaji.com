@@ -1,6 +1,7 @@
 import { waitForFont } from './boot/fonts';
 import { CONTENT } from './content';
 import { FpsProbe } from './core/quality';
+import { konamiMaskBox } from './eggs/konami';
 import { EntryMachine, type EntryEvent, type EntryTimings } from './field/entry';
 import { breathScale, effectiveIntensity } from './field/flow';
 import { MASK_FONT_FAMILY, maskBoxFor, rasterizeMask, type Canvas2DLike, type MaskBox } from './field/nameMask';
@@ -8,7 +9,7 @@ import type { FieldParams } from './field/params';
 import { PointerModel, type PointerKind } from './field/pointer';
 import { DitherRenderer, type FrameInputs } from './field/renderer';
 import { RipplePool } from './field/ripples';
-import { cellCssFor, computeGrid, latticeSpacing, pointerRadius, type Grid } from './field/sizing';
+import { BAND_QUERY, cellCssFor, computeGrid, latticeSpacing, pointerRadius, type Grid } from './field/sizing';
 import { flowZ } from './field/surface';
 import { bindLifecycle, type LifecycleTarget } from './lifecycle';
 import { createLoop, type Loop } from './loop';
@@ -35,7 +36,7 @@ const NO_RIPPLE = 'a, button, [role="button"], input, textarea, select, dialog, 
 const kindOf = (e: PointerEvent): PointerKind => (e.pointerType === 'touch' || e.pointerType === 'pen' ? e.pointerType : 'mouse');
 
 /** Which text the uploaded mask holds (4.5.7: one mask texture, built at arm, deleted at done). */
-type MaskKind = 'entry';
+type MaskKind = 'entry' | 'konami';
 
 /** A machine runs from arm() until its dissolve ends (3.4.2, 3.4.11). */
 function isRunning(m: EntryMachine | null): boolean {
@@ -78,6 +79,7 @@ export class App implements LifecycleTarget {
   private pinnedMs: number | null = null;                         // __pn.setTime (P4)
   private forcedE: number | null = null;                          // __pn.setE (P4)
   private idling = false; // 3.6.4: the last frame returned idle; wakeIfIdle() restarts the loop
+  private konamiM: EntryMachine | null = null; // 3.4.11: the running (or last) Konami
 
   private constructor(o: AppOptions, renderer: DitherRenderer) {
     this.o = o;
@@ -132,8 +134,26 @@ export class App implements LifecycleTarget {
     this.wakeIfIdle(); // 4.6.6: under reduced motion the loop is woken until the tween ends
   }
 
-  /** P11: ignored until Task 20 adds the Konami machine. */
-  konami(): void {}
+  /**
+   * 3.4.11: the field forms "nice." with the entry pipeline. Ignored while the entry or another Konami
+   * runs, when the field is not running (fallback, lost context), and when the scrim leaves no clear
+   * field to write in (konamiMaskBox). The rail stays visible.
+   */
+  konami(): void {
+    if (this.ended || this.disposed || !this.programsReady || this.renderer.lost || this.maskBusy()) return;
+    const k = this.params.konami;
+    const timings: EntryTimings = this.reduced
+      ? { gatherMs: 0, holdMs: k.holdMs, dissolveMs: 0, scrimAtMs: null, revealAtMs: null, cleanupAtMs: null } // P7: jump, hold, jump
+      : { gatherMs: k.gatherMs, holdMs: k.holdMs, dissolveMs: k.dissolveMs, scrimAtMs: null, revealAtMs: null, cleanupAtMs: null };
+    if (!this.uploadMask('konami')) return; // no grid, a raster failure, or no clear field right of the scrim
+    const m = new EntryMachine(timings, (ev) => {
+      if (ev === 'done' && this.maskKind === 'konami') this.clearMask(); // 4.5.7; the FPS probe is not restarted (3.7.9)
+    });
+    m.arm();
+    m.setReady(true);
+    this.konamiM = m;
+    this.wakeIfIdle();
+  }
 
   /** Debug panel: re-arms the full entry including data-entry="wait" (4.3). Ignored while a mask runs. */
   replayEntry(): void {
@@ -337,6 +357,7 @@ export class App implements LifecycleTarget {
   private stepMask(dtMs: number, visible: boolean): number {
     let e = 0;
     if (this.entry) e = this.entry.tick(this.pinnedDt(this.entry, dtMs), visible);
+    if (this.konamiM) e = Math.max(e, this.konamiM.tick(this.pinnedDt(this.konamiM, dtMs), visible));
     if (this.forcedE !== null && this.maskKind !== null) e = this.forcedE;
     return e;
   }
@@ -528,10 +549,12 @@ export class App implements LifecycleTarget {
   private uploadMask(kind: MaskKind): boolean {
     const grid = this.gridValue;
     if (!grid || this.ended || this.disposed) return false;
+    const box = this.maskBoxNow(kind);
+    if (!box) return false; // 3.4.11: the scrim leaves no clear field, so there is nowhere to write "nice."
     try {
       const plane = rasterizeMask(
-        CONTENT.name,
-        this.maskBoxNow(kind),
+        kind === 'konami' ? CONTENT.konamiText : CONTENT.name, // 3.4.6, 3.4.11
+        box,
         { cols: grid.cols, rows: grid.rows, cellCss: grid.cellCss, supersample: this.params.mask.supersample },
         { family: MASK_FONT_FAMILY, weight: this.params.mask.fontWeight },
         this.params.mask,
@@ -545,9 +568,18 @@ export class App implements LifecycleTarget {
     }
   }
 
-  /** 3.4.6: the entry mask box is the whole field box (field-space CSS px). */
-  private maskBoxNow(kind: MaskKind): MaskBox {
-    return maskBoxFor(kind, { w: this.rect.width, h: this.rect.height }, null, false);
+  /**
+   * 3.4.6: the entry box is the whole field. 3.4.11: the Konami box starts at the scrim's clear edge,
+   * measured now (11.17); on the band, or without a scrim, it is the whole band. Null when the scrim
+   * leaves no clear field (konamiMaskBox).
+   */
+  private maskBoxNow(kind: MaskKind): MaskBox | null {
+    const field = { w: this.rect.width, h: this.rect.height };
+    if (kind === 'entry') return maskBoxFor('entry', field, null, false);
+    const band = this.o.win.matchMedia(BAND_QUERY).matches;
+    const scrim = this.o.scrim;
+    const scrimRight = !band && scrim ? scrim.getBoundingClientRect().right - this.rect.left : null;
+    return konamiMaskBox(field, scrimRight, band || scrimRight === null);
   }
 
   /** An offscreen 2D canvas for the rasteriser (4.8.1); never attached to the page. */
@@ -595,7 +627,7 @@ export class App implements LifecycleTarget {
 
   /** True while a mask machine runs (3.4.11: the Konami is ignored then; 3.6.4: the loop stays awake). */
   private maskBusy(): boolean {
-    return isRunning(this.entry);
+    return isRunning(this.entry) || isRunning(this.konamiM);
   }
 
   /** A pinned machine advances to the pinned entry time, forward only, then holds (dt 0). */

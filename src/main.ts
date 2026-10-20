@@ -2,6 +2,7 @@
 import { App } from './app';
 import { CONTENT } from './content';
 import { seedFromLocation } from './core/prng';
+import { createKonami } from './eggs/konami';
 import { DEFAULT_FIELD, cloneField } from './field/params';
 import { initTheme } from './theme/themeController';
 import { startClock } from './ui/clock';
@@ -68,6 +69,11 @@ async function boot(): Promise<void> {
     systemDark: win.matchMedia('(prefers-color-scheme: dark)'),
     button: doc.querySelector<HTMLButtonElement>('[data-theme-toggle]'),
     onChange: (colors, animate) => app?.setColors(colors, animate),
+  });
+  const konami = createKonami(() => app?.konami()); // 3.4.11; app is null on the static fallback
+  doc.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; // these neither advance nor reset the sequence
+    konami.push(e.key);
   });
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const entry = takeEntryControl(doc, win.performance.now());
