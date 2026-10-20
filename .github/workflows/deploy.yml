@@ -25,6 +25,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          VITE_PN_DEBUG: ${{ github.ref_name == 'main' && '0' || '1' }}
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:

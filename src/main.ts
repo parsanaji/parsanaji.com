@@ -77,6 +77,11 @@ async function boot(): Promise<void> {
     applyFallback(doc, 'no-canvas');
     return;
   }
+  let mountTweaks: ((a: App) => void) | null = null;
+  if (PN_DEBUG && query.has('debug')) {
+    const { prepareTweaks } = await import('./tweaks');
+    mountTweaks = prepareTweaks(params);
+  }
   app = App.start({
     canvas,
     params,
@@ -101,6 +106,7 @@ async function boot(): Promise<void> {
     const { installDebugHooks } = await import('./debugHooks');
     if (app) installDebugHooks(app, win);
   }
+  if (app) mountTweaks?.(app);
 }
 
 boot().catch((error: unknown) => {
