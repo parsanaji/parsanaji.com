@@ -178,3 +178,69 @@ describe('layout contract (3.1.1, 3.4.7, 3.6.4, 3.3.7.8, 4.5.9)', () => {
     expect(CSS).not.toMatch(/Geist/);
   });
 });
+
+// Slice-1 review fixes (ledger 2026-10-20): the band name must clear the toggle chip, and print must use the light column.
+const BAND_ROOT_BLOCK = '@media (max-width: 719.98px), not all and (min-aspect-ratio: 1/1) {\n  :root {';
+const PRINT_BLOCK = '@media print {\n  :root, :root[data-theme] {';
+
+/** `clamp(<min>px, <k>vw, <max>px)` evaluated at a viewport width. */
+function clampAt(expr: string, vw: number): number {
+  const m = expr.match(/^clamp\(([\d.]+)px, ([\d.]+)vw, ([\d.]+)px\)$/);
+  expect(m, `not a px/vw/px clamp: ${expr}`).not.toBeNull();
+  const [, min, k, max] = m!.map(Number);
+  return Math.min(Math.max(min, (k * vw) / 100), max);
+}
+
+describe('band fit (3.1.13, 3.1.16; slice-1 review I1)', () => {
+  const band = block(BAND_ROOT_BLOCK);
+  const bandStart = CSS.indexOf(BAND_ROOT_BLOCK);
+  const toggleStart = CSS.indexOf('.theme-toggle {', bandStart);
+  const toggleRule = CSS.slice(toggleStart, CSS.indexOf('}', toggleStart));
+  const baseStart = CSS.indexOf('.theme-toggle {');
+  const baseRule = CSS.slice(baseStart, CSS.indexOf('}', baseStart));
+  const padOf = (rule: string): number | undefined => {
+    const m = rule.match(/padding: 0 ([0-9.]+)ch;/);
+    return m ? Number(m[1]) : undefined;
+  };
+  const padCh = padOf(toggleRule) ?? padOf(baseRule) ?? NaN; // the band inherits the base chip padding unless it overrides it
+
+  it('gives the band toggle its own, tighter padding', () => {
+    expect(toggleStart).toBeGreaterThan(bandStart);
+    expect(padOf(toggleRule)).toBeDefined();
+    expect(padCh).toBeLessThan(2.5);
+  });
+
+  it.each([320, 360, 375, 390, 414, 430, 480, 540, 600, 719])('clears the chip by 8 px at %i px', (w) => {
+    const gutter = clampAt(band['--gutter'], w);
+    const fsName = clampAt(band['--fs-name'], w);
+    const fsLink = clampAt(band['--fs-link'], w);
+    // "Parsa Naji": 10 glyphs at JetBrains Mono's 0.6 em advance, letter-spacing -0.025 em (the -0.045 em margin is slack)
+    const nameRight = gutter + (10 * 0.6 - 10 * 0.025) * fsName;
+    // the chip: the 5ch word box plus the padding on both sides, 1 px border each side
+    const chipLeft = w - gutter - ((5 + 2 * padCh) * 0.6 * fsLink + 2);
+    expect(chipLeft - nameRight).toBeGreaterThanOrEqual(8);
+  });
+
+  it('keeps the band bracket affordance inside the tighter chip', () => {
+    const bandEnd = CSS.indexOf('\n}\n', bandStart);
+    const bandCss = CSS.slice(bandStart, bandEnd);
+    const before = bandCss.match(/\.theme-word::before \{ padding-right: ([\d.]+)ch; \}/)?.[1];
+    const after = bandCss.match(/\.theme-word::after {2}\{ padding-left: ([\d.]+)ch; \}/)?.[1];
+    expect(before).toBeDefined();
+    expect(after).toBe(before);
+    expect(Number(before) + 1).toBeLessThanOrEqual(padCh); // bracket glyph (1ch) plus its gap fits in the padding
+  });
+});
+
+describe('print (3.6.6; slice-1 review I2)', () => {
+  it('forces the light column and color-scheme light for both looks', () => {
+    expect(block(PRINT_BLOCK)).toEqual(LIGHT);
+  });
+
+  it('declares the print tokens after every screen token block, so the cascade cannot undo them', () => {
+    const print = CSS.indexOf(PRINT_BLOCK);
+    expect(print).toBeGreaterThan(CSS.indexOf(LIGHT_FORCED_BLOCK));
+    expect(print).toBeGreaterThan(CSS.indexOf(BAND_ROOT_BLOCK));
+    expect(CSS.match(/@media print/g)).toHaveLength(1);
+  });
+});
