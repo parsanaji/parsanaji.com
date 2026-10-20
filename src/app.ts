@@ -199,7 +199,24 @@ export class App implements LifecycleTarget {
   resize(deviceBox?: { w: number; h: number } | null): void {
     if (this.disposed) return;
     this.regrid(deviceBox);
+    this.redrawNow(); // 12.11: the resized (cleared) backing store never reaches the compositor
     this.loop.wake();
+  }
+
+  /**
+   * Amendment 12.11 (slice-2 review I1): setting canvas.width/height clears the drawing buffer to black, and the
+   * ResizeObserver runs after this frame's draws, so present the last frame's inputs at the new size now; before the
+   * programs are ready (the canvas is still at opacity 0) a field-0 clear is enough. Time does not advance here.
+   */
+  private redrawNow(): void {
+    if (this.disposed || this.renderer.lost) return;
+    if (!this.programsReady || !this.renderer.ready || !this.last) {
+      this.renderer.clear(this.tween.sample(this.o.win.performance.now()).f0);
+      return;
+    }
+    const inputs: FrameInputs = { ...this.last, center: [this.rect.width / 2, this.rect.height / 2] };
+    this.renderer.render(inputs);
+    this.last = inputs;
   }
 
   dprChanged(): void {
