@@ -1,11 +1,17 @@
-export const CONTENT = {
-  name: 'PARSA NAJI',
-  alt: 'soon.',
-  links: {
-    github: 'https://github.com/parsanaji',
-    /** Leave empty until Parsa supplies the URL; the link stays hidden while empty. */
-    linkedin: '',
-    email: 'info@parsanaji.com',
-  },
-  clock: { city: 'IRVINE', timeZone: 'America/Los_Angeles' },
+/**
+ * The JS copy of the facts the scripts need (spec 4.3). index.html stays the source of every visible string;
+ * tests/content.test.ts keeps the two equal. LinkedIn stays '' until Parsa gives the URL (3.1.12).
+ */
+export const CONTENT: {
+  readonly name: 'Parsa Naji';
+  readonly email: 'info@parsanaji.com';
+  readonly konamiText: 'nice.';
+  readonly links: { readonly github: 'https://github.com/parsanaji'; readonly linkedin: string };
+  readonly clock: { readonly timeZone: 'America/Los_Angeles' };
+} = {
+  name: 'Parsa Naji',
+  email: 'info@parsanaji.com',
+  konamiText: 'nice.',
+  links: { github: 'https://github.com/parsanaji', linkedin: '' },
+  clock: { timeZone: 'America/Los_Angeles' },
 };

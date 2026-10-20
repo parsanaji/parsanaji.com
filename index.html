@@ -1,66 +1,127 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Parsa Naji</title>
-    <meta name="description" content="Building something new." />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#070707" />
-    <link rel="canonical" href="https://parsanaji.com/" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Parsa Naji" />
-    <meta property="og:title" content="Parsa Naji" />
-    <meta property="og:description" content="Building something new." />
-    <meta property="og:url" content="https://parsanaji.com/" />
-    <meta property="og:image" content="https://parsanaji.com/og.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Parsa Naji" />
-    <meta name="twitter:description" content="Building something new." />
-    <meta name="twitter:image" content="https://parsanaji.com/og.png" />
-    <link rel="preload" href="/fonts/GeistSans-Black.subset.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/GeistMono-Regular.subset.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="/src/styles.css" />
-    <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Person","name":"Parsa Naji","url":"https://parsanaji.com/","sameAs":["https://github.com/parsanaji"]}
-    </script>
-  </head>
-  <body>
-    <h1 class="sr-only">Parsa Naji</h1>
-    <p class="sr-only">Building something new.</p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script src="/theme-boot.js"></script>
+  <title>Parsa Naji</title>
+  <meta name="description" content="I build AI agents, apps, and the systems behind them.">
+  <meta name="author" content="Parsa Naji">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f2f6fe" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#050a22" media="(prefers-color-scheme: dark)">
+  <link rel="canonical" href="https://parsanaji.com/">
 
-    <canvas id="field" aria-hidden="true"></canvas>
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="/favicon-192.png" sizes="192x192" type="image/png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-    <div id="static" class="static" hidden aria-hidden="true">
-      <span class="static-name"><span>Parsa</span> <span>Naji</span></span>
-    </div>
-    <noscript>
-      <div class="static" aria-hidden="true">
-        <span class="static-name"><span>Parsa</span> <span>Naji</span></span>
-      </div>
-    </noscript>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Parsa Naji">
+  <meta property="og:title" content="Parsa Naji">
+  <meta property="og:description" content="I build AI agents, apps, and the systems behind them.">
+  <meta property="og:url" content="https://parsanaji.com/">
+  <meta property="og:image" content="https://parsanaji.com/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Parsa Naji, I build AI agents, apps, and the systems behind them, over a blue dither field.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Parsa Naji">
+  <meta name="twitter:description" content="I build AI agents, apps, and the systems behind them.">
+  <meta name="twitter:image" content="https://parsanaji.com/og.png">
+  <meta name="twitter:image:alt" content="Parsa Naji, I build AI agents, apps, and the systems behind them, over a blue dither field.">
 
-    <footer id="chrome" class="chrome">
-      <p class="exit">
-        <span class="tagline">building something new</span>
-        <span class="sep" aria-hidden="true">·</span>
-        <a href="https://github.com/parsanaji" rel="me noopener">github</a>
-        <span id="linkedin-sep" class="sep" aria-hidden="true" hidden>·</span>
-        <a id="linkedin" href="#" rel="me noopener" hidden>linkedin</a>
-        <span class="sep" aria-hidden="true">·</span>
-        <a href="mailto:info@parsanaji.com">say hi</a>
-      </p>
-      <p id="clock" class="clock" role="group" aria-label="Local time in Irvine, California" hidden>
-        <span>IRVINE</span>
-        <time id="clock-time">--:--</time>
-        <span id="clock-zone">PT</span>
-      </p>
-    </footer>
+  <link rel="preload" href="/fonts/JetBrainsMono-Regular.subset.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/JetBrainsMono-Bold.subset.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/src/styles.css">
 
-    <div id="cursor" class="cursor" aria-hidden="true"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Person","name":"Parsa Naji","url":"https://parsanaji.com/","jobTitle":["Software Developer","AI Specialist / Developer"],"sameAs":["https://github.com/parsanaji"]}
+  </script>
+</head>
+<body>
+  <canvas class="field" data-field aria-hidden="true"></canvas>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <main class="rail" data-rail>
+    <header class="intro" data-reveal="0">
+      <h1 class="name" data-name>Parsa Naji</h1>
+      <p class="tagline">I build AI agents, apps, and the systems behind them.</p>
+    </header>
+
+    <section class="block block--exp" aria-labelledby="h-exp" data-reveal="1">
+      <h2 class="eyebrow" id="h-exp">Experience</h2>
+      <ul class="rows" role="list">
+        <li class="row"><span class="when">2025 <span aria-hidden="true">—</span><span class="sr-only">to present</span></span><span class="what">Software Developer <span class="sub">Koreex Systems</span></span></li>
+        <li class="row"><span class="when">2026 <span aria-hidden="true">—</span><span class="sr-only">to present</span></span><span class="what">AI Specialist / Developer <span class="sub">Expedient Labs</span></span></li>
+        <li class="row"><span class="when">2025</span><span class="what">Calculus Tutor <span class="sub">Saddleback College</span></span></li>
+      </ul>
+    </section>
+
+    <section class="block block--proj" aria-labelledby="h-proj" data-reveal="2">
+      <h2 class="eyebrow" id="h-proj">Projects</h2>
+      <ul class="rows rows--compact" role="list">
+        <li class="row"><span class="what"><span class="pname">parsanaji.com</span> <span class="sub">This site. WebGL2 dither field.</span></span></li>
+        <li class="row"><span class="what"><span class="pname">SolScope</span> <span class="sub">Microcap cryptocurrency tracker.</span></span></li>
+        <li class="row"><span class="what"><span class="pname">Kaptur</span> <span class="sub">Business expense tracker for trades.</span></span></li>
+        <li class="row"><span class="what"><span class="pname">Mafia</span> <span class="sub">Family and friends game.</span></span></li>
+      </ul>
+    </section>
+
+    <section class="block block--edu" aria-labelledby="h-edu" data-reveal="3">
+      <h2 class="eyebrow" id="h-edu">Education</h2>
+      <ul class="rows" role="list">
+        <li class="row"><span class="when">2025 <span aria-hidden="true">—</span><span class="sr-only">to</span> 2026</span><span class="what">Saddleback College <span class="sub">Business Administration</span></span></li>
+      </ul>
+    </section>
+
+    <section class="block block--misc" aria-labelledby="h-misc" data-reveal="4">
+      <h2 class="eyebrow" id="h-misc">Misc</h2>
+      <ul class="tags" role="list">
+        <li>Agentic Workflows</li>
+        <li>Multi-Agent Orchestration</li>
+        <li>Prompt &amp; Context Engineering</li>
+        <li>LLM Cost and Token Optimization</li>
+        <li>WebGL &amp; shaders</li>
+        <li>iOS/macOS</li>
+        <li>Swift</li>
+      </ul>
+    </section>
+
+    <nav class="links" aria-label="Contact" data-reveal="5">
+      <ul role="list">
+        <li><a class="lnk" href="https://github.com/parsanaji" rel="me" data-link="github">github</a></li>
+        <!-- emitted only when content.links.linkedin is non-empty (never a dead link):
+        <li><a class="lnk" href="{links.linkedin}" rel="me" data-link="linkedin">linkedin</a></li> -->
+        <li><a class="lnk" href="mailto:info@parsanaji.com" data-email="info@parsanaji.com"><span class="swap"><span class="swap-main">say hi</span><span class="swap-alt">copied</span></span></a></li>
+      </ul>
+      <span id="email-hint" hidden>Copies info@parsanaji.com to the clipboard.</span>
+    </nav>
+
+    <p class="status" data-reveal="6"><span class="dot" aria-hidden="true"></span>Building something new</p>
+
+    <p class="place" data-reveal="7">Irvine, CA<span data-clock hidden> · <time data-clock-time></time></span></p>
+
+    <button class="theme-toggle" type="button" data-theme-toggle data-reveal="0" hidden><span class="theme-word" data-theme-word></span></button>
+  </main>
+
+  <dialog class="keys" data-keys aria-labelledby="keys-title" closedby="any">
+    <h2 class="eyebrow" id="keys-title">Shortcuts</h2>
+    <dl class="keys-list">
+      <div><dt><kbd>g</kbd></dt><dd>GitHub</dd></div>
+      <div data-key="linkedin" hidden><dt><kbd>l</kbd></dt><dd>LinkedIn</dd></div>
+      <div><dt><kbd>e</kbd></dt><dd>Copy email</dd></div>
+      <div><dt><kbd>?</kbd></dt><dd>Show or hide this list</dd></div>
+      <div><dt><kbd>esc</kbd></dt><dd>Close</dd></div>
+    </dl>
+    <button class="lnk keys-close" type="button" data-keys-close>close</button>
+  </dialog>
+
+  <p class="sr-only" data-live role="status" aria-live="polite" aria-atomic="true"></p>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
 </html>
