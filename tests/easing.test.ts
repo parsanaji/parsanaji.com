@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clamp01, easeInCubic, easeOutCubic, easeOutExpo } from '../src/engine/easing';
+import { clamp01, easeInCubic, easeOutCubic, easeOutExpo } from '../src/core/easing';
 
 describe('easing', () => {
   it('pins the end points', () => {

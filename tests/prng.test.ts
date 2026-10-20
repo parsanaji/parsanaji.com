@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mulberry32, seedFromLocation } from '../src/engine/prng';
+import { mulberry32, seedFromLocation } from '../src/core/prng';
 
 describe('mulberry32', () => {
   it('is deterministic for a seed and uniform in [0, 1)', () => {

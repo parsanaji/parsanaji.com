@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampDt } from '../src/engine/time';
+import { clampDt } from '../src/core/time';
 
 describe('clampDt', () => {
   it('passes normal frame deltas through', () => {
