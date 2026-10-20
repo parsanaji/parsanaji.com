@@ -1,4 +1,4 @@
-import type { Canvas2DLike, Context2DLike } from '../../src/engine/sampler';
+import type { Canvas2DLike, Context2DLike } from '../../src/field/nameMask';
 
 export interface FakeOptions {
   /** glyph advance as a fraction of the font size */
@@ -7,10 +7,12 @@ export interface FakeOptions {
   capHeightEm?: number;
   /** expose a `letterSpacing` property like modern browsers do */
   nativeLetterSpacing?: boolean;
+  /** report actualBoundingBoxAscent / actualBoundingBoxDescent from measureText (default true) */
+  boundingBox?: boolean;
 }
 
 export interface FakeContext extends Context2DLike {
-  fillTextCalls: { text: string; x: number; y: number }[];
+  fillTextCalls: { text: string; x: number; y: number; font: string }[];
 }
 
 interface Rect {
@@ -20,13 +22,18 @@ interface Rect {
   y1: number;
 }
 
-/** A 2D context that "draws" every fillText as a filled rectangle and reports it from getImageData. */
+/**
+ * A 2D context that "draws" every fillText as a filled rectangle and reports it from getImageData.
+ * Ink spans capHeightEm × size above an 'alphabetic' baseline (descent 0), or ± half of it around a
+ * 'middle' baseline.
+ */
 export function createFakeCanvasFactory(opts: FakeOptions = {}): {
   factory: (width: number, height: number) => Canvas2DLike;
   contexts: FakeContext[];
 } {
   const charWidthEm = opts.charWidthEm ?? 0.6;
   const capHeightEm = opts.capHeightEm ?? 0.7;
+  const boundingBox = opts.boundingBox ?? true;
   const contexts: FakeContext[] = [];
 
   const factory = (width: number, height: number): Canvas2DLike => {
@@ -43,14 +50,16 @@ export function createFakeCanvasFactory(opts: FakeOptions = {}): {
         rects.length = 0;
       },
       measureText(text: string) {
-        return { width: text.length * charWidthEm * fontPx() + spacingPx() * text.length };
+        const width = text.length * charWidthEm * fontPx() + spacingPx() * text.length;
+        return boundingBox ? { width, actualBoundingBoxAscent: capHeightEm * fontPx(), actualBoundingBoxDescent: 0 } : { width };
       },
       fillText(text: string, x: number, y: number) {
-        ctx.fillTextCalls.push({ text, x, y });
-        const w = ctx.measureText(text).width;
+        ctx.fillTextCalls.push({ text, x, y, font: ctx.font });
+        const w = text.length * charWidthEm * fontPx() + spacingPx() * text.length;
         const h = capHeightEm * fontPx();
         const left = ctx.textAlign === 'center' ? x - w / 2 : x;
-        rects.push({ x0: left, x1: left + w, y0: y - h / 2, y1: y + h / 2 });
+        const [y0, y1] = ctx.textBaseline === 'alphabetic' ? [y - h, y] : [y - h / 2, y + h / 2];
+        rects.push({ x0: left, x1: left + w, y0, y1 });
       },
       getImageData(_x: number, _y: number, w: number, h: number) {
         const data = new Uint8ClampedArray(w * h * 4);
