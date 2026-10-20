@@ -32,9 +32,18 @@ function applyFallback(doc: Document, reason: string): void {
   doc.documentElement.removeAttribute('data-entry');
 }
 
-/** P9: there is no entry machine until Task 18, so main.ts releases the pre-hidden rail and plans no entry. */
-function takeEntryControl(doc: Document): boolean {
-  doc.documentElement.removeAttribute('data-entry');
+/**
+ * 4.7.2: when theme-boot.js set data-entry="run" and main.ts runs before 4000 ms, switch to "wait"
+ * (cancelling the CSS failsafe) and plan the entry; otherwise the failsafe already showed the rail,
+ * so remove data-entry and plan none (11.7).
+ */
+function takeEntryControl(doc: Document, nowMs: number): boolean {
+  const html = doc.documentElement;
+  if (html.getAttribute('data-entry') === 'run' && nowMs < 4000) {
+    html.setAttribute('data-entry', 'wait');
+    return true;
+  }
+  html.removeAttribute('data-entry');
   return false;
 }
 
@@ -61,7 +70,7 @@ async function boot(): Promise<void> {
     onChange: (colors, animate) => app?.setColors(colors, animate),
   });
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const entry = takeEntryControl(doc);
+  const entry = takeEntryControl(doc, win.performance.now());
 
   // 4.7.3 field gate
   if (query.has('nowebgl')) {

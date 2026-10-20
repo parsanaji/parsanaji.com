@@ -10,6 +10,8 @@ export interface PnHooks {
   parity(): ParityReport | null; // null when the renderer is not ready
   gpuTime(frames: number): Promise<GpuTimeReport | null>; // null without EXT_disjoint_timer_query_webgl2
   grid(): Grid | null;
+  setTime(ms: number | null): void; // pins the running entry or Konami at entry time ms (forward only); null releases
+  setE(e: number | null): void; // forces the mask progress while a mask is uploaded; null releases
 }
 
 /** EXT_disjoint_timer_query_webgl2 is not in lib.dom: the two enums this file uses. */
@@ -72,6 +74,8 @@ export function installDebugHooks(app: App, win: Window): PnHooks {
     },
 
     grid: () => app.grid,
+    setTime: (ms: number | null) => app.debug().pinEntry(ms),
+    setE: (e: number | null) => app.debug().forceE(e),
   };
   (win as Window & { __pn?: PnHooks }).__pn = hooks;
   return hooks;

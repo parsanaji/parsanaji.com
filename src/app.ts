@@ -1,5 +1,9 @@
+import { waitForFont } from './boot/fonts';
+import { CONTENT } from './content';
 import { FpsProbe } from './core/quality';
+import { EntryMachine, type EntryEvent, type EntryTimings } from './field/entry';
 import { breathScale, effectiveIntensity } from './field/flow';
+import { MASK_FONT_FAMILY, maskBoxFor, rasterizeMask, type Canvas2DLike, type MaskBox } from './field/nameMask';
 import type { FieldParams } from './field/params';
 import { PointerModel, type PointerKind } from './field/pointer';
 import { DitherRenderer, type FrameInputs } from './field/renderer';
@@ -21,12 +25,22 @@ export interface AppDebug {
   readonly params: FieldParams;
   lastFrame(): FrameInputs | null; // inputs of the last render
   setFrozen(frozen: boolean): void; // freezes sim time and τ (panel "freeze time")
+  pinEntry(ms: number | null): void; // P4, 4.7.5: __pn.setTime
+  forceE(e: number | null): void; // P4, 4.7.5: __pn.setE
 }
 
 /** Spec 3.3.8: a press on any of these never spawns a ring (11.26: nor one inside a dialog). */
 const NO_RIPPLE = 'a, button, [role="button"], input, textarea, select, dialog, [data-no-ripple]';
 
 const kindOf = (e: PointerEvent): PointerKind => (e.pointerType === 'touch' || e.pointerType === 'pen' ? e.pointerType : 'mouse');
+
+/** Which text the uploaded mask holds (4.5.7: one mask texture, built at arm, deleted at done). */
+type MaskKind = 'entry';
+
+/** A machine runs from arm() until its dissolve ends (3.4.2, 3.4.11). */
+function isRunning(m: EntryMachine | null): boolean {
+  return m !== null && m.phase !== 'idle' && m.phase !== 'done';
+}
 
 /** Owns the field: renderer, models, loop and lifecycle (spec 4.2, 4.4, 4.7.4). Only App.start constructs it. */
 export class App implements LifecycleTarget {
@@ -55,6 +69,14 @@ export class App implements LifecycleTarget {
   private readonly rippleBuf = new Float32Array(32);
   private last: FrameInputs | null = null;
   private pendingColors: FieldColors | null = null;
+  private entry: EntryMachine | null = null;                      // 3.4: the load entry; replayEntry() makes a new one
+  private maskKind: MaskKind | null = null;                       // 4.5.7: which text the uploaded mask holds
+  private maskTimer: ReturnType<typeof setTimeout> | null = null; // 3.7.1: re-raster debounce
+  private fontSettled = false;                                    // 3.4.3 item 2
+  private probeStarted = false;                                   // 3.7.9: the probe runs once per session
+  private ended = false;                                          // set when fail() or dispose() runs the unbinds
+  private pinnedMs: number | null = null;                         // __pn.setTime (P4)
+  private forcedE: number | null = null;                          // __pn.setE (P4)
 
   private constructor(o: AppOptions, renderer: DitherRenderer) {
     this.o = o;
@@ -83,6 +105,7 @@ export class App implements LifecycleTarget {
       app.unbinds.push(bindLifecycle(app, { win: o.win, doc: o.doc, canvas: o.canvas })); // P3
       app.bindPointer();
       app.loop.start();
+      app.beginEntry(); // 4.7.4 steps 3–4
       return app;
     } catch {
       renderer.dispose();
@@ -109,8 +132,14 @@ export class App implements LifecycleTarget {
   /** P11: ignored until Task 20 adds the Konami machine. */
   konami(): void {}
 
-  /** P11: ignored until Task 18 adds the entry. */
-  replayEntry(): void {}
+  /** Debug panel: re-arms the full entry including data-entry="wait" (4.3). Ignored while a mask runs. */
+  replayEntry(): void {
+    if (this.ended || this.disposed || this.reduced || !this.programsReady || this.maskBusy()) return;
+    this.entry = new EntryMachine(this.entryTimings(), (ev) => this.onEntryEvent(ev));
+    this.o.doc.documentElement.setAttribute('data-entry', 'wait');
+    this.entry.arm();
+    this.prepareEntryMask();
+  }
 
   /** Debug panel live update: params object -> uniforms, then regrid (cell and density changes take effect). */
   applyParams(): void {
@@ -137,6 +166,8 @@ export class App implements LifecycleTarget {
       setFrozen: (frozen) => {
         this.frozen = frozen;
       },
+      pinEntry: (ms: number | null) => this.pinEntry(ms),
+      forceE: (e: number | null) => this.forceE(e),
     };
   }
 
@@ -182,6 +213,7 @@ export class App implements LifecycleTarget {
 
   contextLost(): void {
     if (this.disposed) return;
+    this.skipEntry(); // 3.6.3, 3.4.9: context loss mid-entry makes the rail usable at once
     this.loop.stop();
     this.armRestore();
   }
@@ -272,15 +304,23 @@ export class App implements LifecycleTarget {
     }
   }
 
-  /** Mask progress e; Task 18 drives the entry and Konami machines here. */
-  private stepMask(_dtMs: number, _visible: boolean): number {
-    return 0;
+  /** 4.4.3 step 2: e from the running machine; a debug pin holds it at the pinned entry time. */
+  private stepMask(dtMs: number, visible: boolean): number {
+    let e = 0;
+    if (this.entry) e = this.entry.tick(this.pinnedDt(this.entry, dtMs), visible);
+    if (this.forcedE !== null && this.maskKind !== null) e = this.forcedE;
+    return e;
   }
 
-  /** The first real frame (3.4.7.1): show the canvas and start the FPS probe (3.7.9, 11.30). */
+  /** Programs ready (3.4.3 item 1): a planned entry now waits for its mask; without one this is the first real frame (3.4.7.1). */
   private onProgramsReady(): void {
-    this.o.doc.documentElement.setAttribute('data-field-ready', '');
-    this.probe = new FpsProbe(this.params.probe.frames, this.params.probe.thresholdFps);
+    this.programsReady = true; // idempotent (frame() set it just before); prepareEntryMask() reads it
+    if (isRunning(this.entry)) {
+      this.prepareEntryMask(); // 3.4.3; 'start' or 'skip' shows the canvas, 'done' starts the probe
+      return;
+    }
+    this.o.doc.documentElement.setAttribute('data-field-ready', ''); // 3.4.7.1: no-entry path
+    this.startProbe(); // 3.7.9: first real frame without an entry
   }
 
   /** Spec 4.4.3 step 6: only reduced motion renders on demand; Task 19 adds the 3.6.4 settled condition. */
@@ -295,6 +335,7 @@ export class App implements LifecycleTarget {
     const cellCss = cellCssFor(r.width, this.params.cell, this.params.density, this.degrade);
     this.gridValue = computeGrid(r.width, r.height, this.o.win.devicePixelRatio, cellCss, deviceBox);
     this.renderer.resize(this.gridValue);
+    this.scheduleMaskRaster(); // 3.7.1: an active mask is re-rasterised 150 ms after the last resize
   }
 
   /** Caches the canvas rect (3.3.7.7). A press re-measures too: a phone's URL bar moves the fixed band without resizing it. */
@@ -368,5 +409,171 @@ export class App implements LifecycleTarget {
       win.removeEventListener('blur', onRelease);
       doc.documentElement.removeEventListener('pointerleave', onRelease);
     });
+  }
+
+  /** 4.7.4 steps 3–4: arm the planned entry, skip it on rail focus (3.4.9, 3.5.11), wait for the mask font (3.4.3). */
+  private beginEntry(): void {
+    const rail = this.o.rail;
+    if (rail) {
+      const onFocusIn = (): void => {
+        if (this.o.doc.documentElement.hasAttribute('data-entry')) this.skipEntry();
+      };
+      rail.addEventListener('focusin', onFocusIn);
+      this.unbinds.push(() => rail.removeEventListener('focusin', onFocusIn));
+    }
+    this.unbinds.push(() => {
+      this.ended = true;
+      this.cancelMaskRaster();
+    });
+    const settle = (): void => {
+      this.fontSettled = true;
+      this.prepareEntryMask();
+    };
+    // 3.4.3 item 2, 3.6.7: loaded, timeout or unavailable all settle; MASK_FONT_FAMILY carries the fallback stack
+    waitForFont('700 10px "JetBrains Mono"', this.params.boot.fontTimeoutMs, this.o.doc.fonts).then(settle, settle);
+    if (this.o.entry && !this.reduced) {
+      this.entry = new EntryMachine(this.entryTimings(), (ev) => this.onEntryEvent(ev));
+      this.entry.arm();
+    }
+  }
+
+  /** 4.9: the live (panel-tunable) entry times. */
+  private entryTimings(): EntryTimings {
+    const t = this.params.entry;
+    return {
+      gatherMs: t.gatherMs,
+      holdMs: t.holdMs,
+      dissolveMs: t.dissolveMs,
+      scrimAtMs: t.scrimAtMs,
+      revealAtMs: t.revealAtMs,
+      cleanupAtMs: t.cleanupAtMs,
+    };
+  }
+
+  /** 4.4.5: entry events to <html> state (3.4.7); no inline styles. */
+  private onEntryEvent(ev: EntryEvent): void {
+    const html = this.o.doc.documentElement;
+    switch (ev) {
+      case 'start':
+        html.setAttribute('data-field-ready', '');
+        break;
+      case 'scrim':
+        html.setAttribute('data-entry', 'scrim');
+        break;
+      case 'reveal':
+        html.setAttribute('data-entry', 'reveal');
+        break;
+      case 'skip':
+        this.pinnedMs = null; // a skip releases a debug pin so its 250 ms dissolve can run
+        html.setAttribute('data-entry', 'skip');
+        html.setAttribute('data-field-ready', '');
+        break;
+      case 'done':
+        if (this.maskKind === 'entry') this.clearMask();
+        if (this.programsReady) this.startProbe(); // 3.7.9: the probe starts at the entry's done
+        break;
+      case 'cleanup':
+        html.removeAttribute('data-entry');
+        break;
+    }
+  }
+
+  /** 3.4.3: the entry leaves pending only when programs, font and mask are all ready. */
+  private prepareEntryMask(): void {
+    const entry = this.entry;
+    if (!entry || entry.phase !== 'pending' || !this.programsReady || !this.fontSettled || this.ended || this.disposed) return;
+    if (this.maskKind !== 'entry' && !this.uploadMask('entry')) {
+      entry.skip(0); // no mask, no entry: show the rail and carry on as the no-entry path
+      return;
+    }
+    entry.setReady(true);
+  }
+
+  /** 4.8, 4.5.7: rasterise the mask text for the current grid and upload it; false when that fails. */
+  private uploadMask(kind: MaskKind): boolean {
+    const grid = this.gridValue;
+    if (!grid || this.ended || this.disposed) return false;
+    try {
+      const plane = rasterizeMask(
+        CONTENT.name,
+        this.maskBoxNow(kind),
+        { cols: grid.cols, rows: grid.rows, cellCss: grid.cellCss, supersample: this.params.mask.supersample },
+        { family: MASK_FONT_FAMILY, weight: this.params.mask.fontWeight },
+        this.params.mask,
+        (w, h) => this.maskCanvas(w, h),
+      );
+      this.renderer.setMask(plane);
+      this.maskKind = kind;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** 3.4.6: the entry mask box is the whole field box (field-space CSS px). */
+  private maskBoxNow(kind: MaskKind): MaskBox {
+    return maskBoxFor(kind, { w: this.rect.width, h: this.rect.height }, null, false);
+  }
+
+  /** An offscreen 2D canvas for the rasteriser (4.8.1); never attached to the page. */
+  private maskCanvas(w: number, h: number): Canvas2DLike {
+    const c = this.o.doc.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c as unknown as Canvas2DLike;
+  }
+
+  /** 4.5.7: the mask texture is deleted at done. */
+  private clearMask(): void {
+    this.cancelMaskRaster();
+    this.renderer.setMask(null);
+    this.maskKind = null;
+  }
+
+  /** 3.7.1: an active mask is re-rasterised 150 ms after the last resize; until then the old one is drawn. */
+  private scheduleMaskRaster(): void {
+    if (this.maskKind === null || this.ended || this.disposed) return;
+    this.cancelMaskRaster();
+    this.maskTimer = setTimeout(() => {
+      this.maskTimer = null;
+      if (this.maskKind !== null) this.uploadMask(this.maskKind);
+    }, this.params.boot.resizeDebounceMs);
+  }
+
+  private cancelMaskRaster(): void {
+    if (this.maskTimer !== null) clearTimeout(this.maskTimer);
+    this.maskTimer = null;
+  }
+
+  /** 3.4.9 triggers: focus inside the rail, reduced motion turning on, context loss. */
+  private skipEntry(): void {
+    this.entry?.skip(this.params.entry.skipMs);
+  }
+
+  /** 3.7.9: 60 frames from the entry's done, or from the first real frame without an entry; once per session. */
+  private startProbe(): void {
+    if (this.probeStarted) return;
+    this.probeStarted = true;
+    this.probe = new FpsProbe(this.params.probe.frames, this.params.probe.thresholdFps);
+  }
+
+  /** True while a mask machine runs (3.4.11: the Konami is ignored then; 3.6.4: the loop stays awake). */
+  private maskBusy(): boolean {
+    return isRunning(this.entry);
+  }
+
+  /** A pinned machine advances to the pinned entry time, forward only, then holds (dt 0). */
+  private pinnedDt(m: EntryMachine, dtMs: number): number {
+    return this.pinnedMs === null ? dtMs : Math.max(0, this.pinnedMs - m.elapsedMs);
+  }
+
+  /** P4: __pn.setTime(ms); null releases. Takes effect on the next frame. */
+  private pinEntry(ms: number | null): void {
+    this.pinnedMs = ms === null || !Number.isFinite(ms) ? null : Math.max(0, ms);
+  }
+
+  /** P4: __pn.setE(e) while a mask is uploaded; null releases. */
+  private forceE(e: number | null): void {
+    this.forcedE = e === null || !Number.isFinite(e) ? null : Math.min(1, Math.max(0, e));
   }
 }
