@@ -3,11 +3,13 @@ import { App } from './app';
 import { CONTENT } from './content';
 import { seedFromLocation } from './core/prng';
 import { createKonami } from './eggs/konami';
+import { initShortcuts } from './eggs/shortcuts';
 import { DEFAULT_FIELD, cloneField } from './field/params';
 import { initTheme } from './theme/themeController';
 import { startClock } from './ui/clock';
 import { initEmailCopy } from './ui/emailCopy';
 import { initLinks } from './ui/links';
+import { initOverlay } from './ui/overlay';
 
 /** Spec 4.12.1: true on the dev server and preview builds, false (and folded away) in production. */
 const PN_DEBUG = import.meta.env.DEV || import.meta.env.VITE_PN_DEBUG === '1';
@@ -54,9 +56,11 @@ async function boot(): Promise<void> {
   const query = new URLSearchParams(win.location.search);
   const params = cloneField(DEFAULT_FIELD);
   let app: App | null = null;
-  initLinks(CONTENT.links.linkedin, doc);
-  const email = doc.querySelector<HTMLAnchorElement>('a[data-email]');
-  if (email) initEmailCopy(email, CONTENT.email, { holdMs: params.copy.holdMs, live: doc.querySelector<HTMLElement>('[data-live]') });
+  const { linkedin } = initLinks(CONTENT.links.linkedin, doc);
+  const emailLink = doc.querySelector<HTMLAnchorElement>('a[data-email]');
+  const email = emailLink
+    ? initEmailCopy(emailLink, CONTENT.email, { holdMs: params.copy.holdMs, live: doc.querySelector<HTMLElement>('[data-live]') })
+    : null;
   const time = doc.querySelector<HTMLTimeElement>('time[data-clock-time]');
   const clock = doc.querySelector<HTMLElement>('[data-clock]');
   if (time && clock) {
@@ -70,6 +74,32 @@ async function boot(): Promise<void> {
     button: doc.querySelector<HTMLButtonElement>('[data-theme-toggle]'),
     onChange: (colors, animate) => app?.setColors(colors, animate),
   });
+  const keysPanel = doc.querySelector<HTMLDialogElement>('dialog[data-keys]');
+  const overlay = keysPanel ? initOverlay(keysPanel, doc) : null; // 3.5.5; shortcuts work without it (4.3.1)
+  initShortcuts(
+    doc,
+    (action) => {
+      if (overlay?.open && action !== 'overlay' && action !== 'close') return; // 3.5.4: only ? and Escape while open
+      switch (action) {
+        case 'github':
+        case 'linkedin': {
+          const href = doc.querySelector<HTMLAnchorElement>(`a[data-link="${action}"]`)?.href;
+          if (href) win.location.assign(href); // 11.28: same tab, like a click
+          break;
+        }
+        case 'email':
+          email?.trigger().catch(() => undefined); // 3.5.3: same copy, live region and mailto fallback
+          break;
+        case 'overlay':
+          overlay?.toggle();
+          break;
+        case 'close':
+          overlay?.close();
+          break;
+      }
+    },
+    { linkedin },
+  );
   const konami = createKonami(() => app?.konami()); // 3.4.11; app is null on the static fallback
   doc.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; // these neither advance nor reset the sequence
