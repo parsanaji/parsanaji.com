@@ -20,7 +20,7 @@ export const UNIFORMS_PASS1: readonly string[] = Object.freeze([
 ]);
 /** Pass-2 uniforms in declaration order (dash.vert; 12.14). The dash fragment shader declares none. */
 export const UNIFORMS_PASS2: readonly string[] = Object.freeze([
-  'uSurf', 'uCols', 'uView', 'uCell', 'uDpr', 'uZd', 'uPointer', 'uE', 'uDash', 'uDash2', 'uField1', 'uField2', 'uField3', 'uTiers', 'uAlpha',
+  'uSurf', 'uCols', 'uView', 'uCell', 'uDpr', 'uZd', 'uPointer', 'uE', 'uDash', 'uDash2', 'uField1', 'uField2', 'uField3', 'uTiers', 'uAlpha', 'uInk', 'uWeight',
 ]);
 
 /** Everything one frame uploads (spec 4.4.3 step 4). Field-space CSS px; `z` is flowZ's 9 values; `ripples` is 8 × vec4. */
@@ -224,6 +224,15 @@ export class FieldRenderer {
     gl.uniform3f(u2.uField1 ?? null, f.colors.f1[0], f.colors.f1[1], f.colors.f1[2]);
     gl.uniform3f(u2.uField2 ?? null, f.colors.f2[0], f.colors.f2[1], f.colors.f2[2]);
     gl.uniform3f(u2.uField3 ?? null, f.colors.f3[0], f.colors.f3[1], f.colors.f3[2]);
+    // 12.15: the name's ink is field-3 pushed away from field-0 (darker on the light look, brighter on the dark one);
+    // the look's stroke weight follows field-0's luma, so it crossfades with the colour tween
+    const c = f.colors;
+    const d = this.params.dash;
+    const luma = 0.2126 * c.f0[0] + 0.7152 * c.f0[1] + 0.0722 * c.f0[2];
+    const light = Math.min(1, Math.max(0, (luma - 0.3) / 0.4));
+    const ink = (i: number): number => Math.min(1, Math.max(0, c.f3[i] + (c.f3[i] - c.f0[i]) * d.textInk));
+    gl.uniform3f(u2.uInk ?? null, ink(0), ink(1), ink(2));
+    gl.uniform4f(u2.uWeight ?? null, 1 + (d.weightLight - 1) * light, d.textWidth, d.textLen, 1);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.target.tex);
     gl.bindVertexArray(this.quad);

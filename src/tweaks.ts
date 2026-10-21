@@ -87,6 +87,10 @@ function mount(params: FieldParams, baseline: FieldParams, app: App): GUI {
   dashes.add(params.dash, 'flowAmp', 0, 2.5, 0.05).onChange(live);
   dashes.add(params.dash, 'repelK', 0, 6, 0.1).onChange(live);
   dashes.add(params.dash, 'color', ['core', 'muted']).onChange(live);
+  dashes.add(params.dash, 'weightLight', 1, 2.5, 0.05).onChange(live);
+  dashes.add(params.dash, 'textWidth', 1, 4, 0.1).onChange(live);
+  dashes.add(params.dash, 'textLen', 1, 2, 0.05).onChange(live);
+  dashes.add(params.dash, 'textInk', 0, 1, 0.05).onChange(live);
 
   const surface = gui.addFolder('surface');
   surface.add(params, 'intensity', ['subtle', 'medium', 'lively']).onChange(live);

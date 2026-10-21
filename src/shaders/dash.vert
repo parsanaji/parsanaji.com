@@ -17,6 +17,8 @@ uniform vec3  uField2;      // uTiers.x < v <= uTiers.y
 uniform vec3  uField3;      // v > uTiers.y
 uniform vec2  uTiers;       // 0.68, 0.85
 uniform vec2  uAlpha;       // x = alphaMin (0.16), y = colour mode (0 = core tiers, 1 = muted)
+uniform vec3  uInk;         // the name's stroke colour: field-3 pushed away from field-0 (12.15)
+uniform vec4  uWeight;      // x = width multiplier of the look (light 1.3), y = name width multiplier, z = name length multiplier, w = name alpha
 
 out vec2 vLocal;            // CSS px along (x) and across (y) the stroke, from its centre
 out vec3 vShape;            // x = half-length, y = half-width, z = anti-alias half-width (CSS px)
@@ -28,7 +30,9 @@ void main() {
   int id = gl_InstanceID;
   int row = id / uCols;
   ivec2 cell = ivec2(id - row * uCols, row);
-  float v = texelFetch(uSurf, cell, 0).r;
+  vec4 t = texelFetch(uSurf, cell, 0);
+  float v = t.r;
+  float m = t.g;                                            // 0..1 inside the forming name (12.15)
   vec2 h = (vec2(cell) + 0.5) * uCell;                      // lattice point, CSS px, y down
   float I = uDash2.x;
 
@@ -49,8 +53,8 @@ void main() {
   float ang = noise3(vec3(h / uDash2.w + OFFSET, uZd.z)) * 6.2831853;
   vec2 dir = vec2(cos(ang), sin(ang));
   vec2 nrm = vec2(-dir.y, dir.x);
-  float halfLen = uCell * (uDash.x + uDash.y * v);
-  float halfW = max(1.0, uCell * uDash.z) * 0.5;
+  float halfLen = uCell * (uDash.x + uDash.y * v) * (1.0 + (uWeight.z - 1.0) * m);
+  float halfW = max(1.0, uCell * uDash.z * uWeight.x) * 0.5 * (1.0 + (uWeight.y - 1.0) * m);
   float aa = 0.7 / uDpr;
   vec2 corner = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1)) * 2.0 - 1.0;   // (-1,-1) (1,-1) (-1,1) (1,1)
   vec2 local = corner * vec2(halfLen + halfW + aa, halfW + aa);
@@ -60,5 +64,6 @@ void main() {
   vLocal = local;
   vShape = vec3(halfLen, halfW, aa);
   vec3 ink = uAlpha.y > 0.5 ? uField1 : (v > uTiers.y ? uField3 : (v > uTiers.x ? uField2 : uField1));
-  vColor = vec4(ink, uAlpha.x + (1.0 - uAlpha.x) * v);
+  ink = mix(ink, uInk, m);
+  vColor = vec4(ink, mix(uAlpha.x + (1.0 - uAlpha.x) * v, uWeight.w, m));
 }

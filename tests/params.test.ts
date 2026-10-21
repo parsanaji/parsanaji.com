@@ -11,6 +11,7 @@ describe('DEFAULT_FIELD', () => {
         k: { sparse: 0.021, medium: 0.0135, dense: 0.0092 }, minCss: 5, maxCss: 40, cap: 7000, degradeK: 1.5,
         lenMin: 0.15, lenK: 0.5, widthK: 0.08, alphaMin: 0.16, flowAmp: 0.9, flowScalePx: 171.43, repelK: 2.6, angleScalePx: 200,
         color: 'core',
+        weightLight: 1.3, textWidth: 2, textLen: 1.3, textInk: 0.25,
       },
       shape: { warpScalePx: 240, mainScalePx: 141.18, warpAmp: 0, level: 0.25, gain: 1.9, shapeK: 0 },
       tiers: { t2: 0.68, t3: 0.85 },

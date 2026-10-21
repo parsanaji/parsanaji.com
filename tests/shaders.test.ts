@@ -67,10 +67,17 @@ describe('dash.vert (spec 12.14, pass 2)', () => {
     expect(DASH_VERT).not.toMatch(/^\s*(layout\([^)]*\)\s*)?in\s+\w+\s+\w+\s*;/m);
   });
 
-  it('writes the Blueprint stroke geometry: half-length sp (lenMin + lenK v), width floored at 1 CSS px', () => {
-    expect(DASH_VERT).toContain('float halfLen = uCell * (uDash.x + uDash.y * v);');
-    expect(DASH_VERT).toContain('float halfW = max(1.0, uCell * uDash.z) * 0.5;');
-    expect(DASH_VERT).toContain('vColor = vec4(ink, uAlpha.x + (1.0 - uAlpha.x) * v);');
+  it('writes the Blueprint stroke geometry, scaled by the look weight and the name multipliers (12.15)', () => {
+    expect(DASH_VERT).toContain('float halfLen = uCell * (uDash.x + uDash.y * v) * (1.0 + (uWeight.z - 1.0) * m);');
+    expect(DASH_VERT).toContain('float halfW = max(1.0, uCell * uDash.z * uWeight.x) * 0.5 * (1.0 + (uWeight.y - 1.0) * m);');
+    expect(DASH_VERT).toContain('ink = mix(ink, uInk, m);');
+    expect(DASH_VERT).toContain('vColor = vec4(ink, mix(uAlpha.x + (1.0 - uAlpha.x) * v, uWeight.w, m));');
+  });
+
+  it('reads the name mix from the pass-1 texel .g (12.15)', () => {
+    expect(DASH_VERT).toContain('float m = t.g;');
+    expect(SURFACE).toContain('tm = k * m;');
+    expect(SURFACE).toContain('outColor = vec4(min(v, 1.0), tm, 0.0, 1.0);');
   });
 });
 

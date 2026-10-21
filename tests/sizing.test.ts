@@ -8,6 +8,7 @@ const dash: FieldParams['dash'] = {
   k: { sparse: 0.021, medium: 0.0135, dense: 0.0092 }, minCss: 5, maxCss: 40, cap: 7000, degradeK: 1.5,
   lenMin: 0.15, lenK: 0.5, widthK: 0.08, alphaMin: 0.16, flowAmp: 0.9, flowScalePx: 171.43, repelK: 2.6, angleScalePx: 200,
   color: 'core',
+  weightLight: 1.3, textWidth: 2, textLen: 1.3, textInk: 0.25,
 };
 const pointer: FieldParams['pointer'] = { radiusK: 0, radiusSp: 8, warpK: 0, boost: 0.35, lerp: 0.18, riseMs: 200, fallMs: 600, velNorm: 1500, velRadiusGain: 0.1 };
 

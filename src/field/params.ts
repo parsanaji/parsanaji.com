@@ -12,6 +12,10 @@ export interface FieldParams {
     k: Record<Density, number>; minCss: number; maxCss: number; cap: number; degradeK: number;
     lenMin: number; lenK: number; widthK: number; alphaMin: number; flowAmp: number; flowScalePx: number; repelK: number; angleScalePx: number;
     color: DashColor;
+    /** 12.15: stroke width multiplier on the light look (thin dark strokes on white read thinner than light ones on dark) */
+    weightLight: number;
+    /** 12.15: the forming name's strokes: width and length multipliers, and how far field-3 is pushed away from field-0 */
+    textWidth: number; textLen: number; textInk: number;
   };
   shape: { warpScalePx: number; mainScalePx: number; warpAmp: number; level: number; gain: number; shapeK: number };
   tiers: { t2: number; t3: number };
@@ -45,6 +49,7 @@ export const DEFAULT_FIELD: FieldParams = {
     k: { sparse: 0.021, medium: 0.0135, dense: 0.0092 }, minCss: 5, maxCss: 40, cap: 7000, degradeK: 1.5,
     lenMin: 0.15, lenK: 0.5, widthK: 0.08, alphaMin: 0.16, flowAmp: 0.9, flowScalePx: 171.43, repelK: 2.6, angleScalePx: 200,
     color: 'core',
+    weightLight: 1.3, textWidth: 2, textLen: 1.3, textInk: 0.25,
   },
   // Blueprint vAt() non-raster: fbm at (x / 12) × 0.085 = x / 141.18, no domain warp, (v - 0.25) × 1.9, no dither curve
   shape: { warpScalePx: 240, mainScalePx: 141.18, warpAmp: 0, level: 0.25, gain: 1.9, shapeK: 0 },

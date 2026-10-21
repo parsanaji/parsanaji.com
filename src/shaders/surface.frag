@@ -50,6 +50,7 @@ void main() {
   vec2 warp;
   float F = surface(s, warp);
   float v = F;
+  float tm = 0.0;                                      // name mix for pass 2: 1 inside the formed text (12.15)
 
   if (uE > 0.0) {
     // dissolve: each cell flips between field and text at its own static noise threshold
@@ -60,6 +61,7 @@ void main() {
     float m = texture(uMask, (s + warp * (2.0 * uMaskMix.w * g * g)) / uMaskSize).r;
     float n = mix(uMaskMix.x * F, uMaskMix.y + (1.0 - uMaskMix.y) * F, m);
     v = mix(F, n, k);
+    tm = k * m;
   }
 
   v += f * uWarp.y;                                    // pointer brightness boost
@@ -69,5 +71,5 @@ void main() {
     float e = length(xw - R.xy) - R.z;
     v += exp(-(e * e) / (2.0 * uRipple.x * uRipple.x)) * R.w * uRipple.y;
   }
-  outColor = vec4(min(v, 1.0), 0.0, 0.0, 1.0);
+  outColor = vec4(min(v, 1.0), tm, 0.0, 1.0);
 }
