@@ -89,6 +89,19 @@ describe('index.html DOM contract (4.3.2, 3.1.4)', () => {
     expect(values).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 0]);
   });
 
+  it('links the three shipped projects to their sites in a new tab, and this site to nothing', () => {
+    const projects: [string, string][] = [
+      ['SolScope', 'https://koreex.com/solscope/'],
+      ['Kaptur', 'https://koreex.com/kaptur/'],
+      ['Mafia', 'https://koreex.com/mafia/'],
+    ];
+    for (const [name, url] of projects) {
+      expect(body).toContain(`<a class="pname" href="${url}" target="_blank" rel="noopener">${name}</a>`);
+    }
+    expect(body).toContain('<span class="pname">parsanaji.com</span>');
+    expect(all(/<a class="pname" [^>]*>/g, body)).toHaveLength(3);
+  });
+
   it('has no LinkedIn element while CONTENT.links.linkedin is empty, and the link when it is set (3.1.12)', () => {
     if (CONTENT.links.linkedin) {
       expect(body).toContain(`<a class="lnk" href="${CONTENT.links.linkedin}" rel="me" data-link="linkedin">linkedin</a>`);

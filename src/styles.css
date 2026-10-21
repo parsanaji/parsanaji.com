@@ -315,6 +315,17 @@ html.no-webgl .scrim { display: none; }
 }
 .rows--compact .row { padding-block: calc(var(--row-pad) * 0.5); border-top: 0; }
 .pname { color: var(--fg); }
+/* project links: a hairline underline at rest says "link"; hover and focus turn it and the name accent (3.5.2: two cues) */
+a.pname {
+  text-decoration: underline 1px;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.3em;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+a.pname:hover,
+a.pname:focus-visible { color: var(--accent-2); text-decoration-color: var(--accent-2); }
+a.pname:focus { outline: none; }
+a.pname:focus-visible { text-decoration-thickness: 2px; }
 
 /* misc: wrapping tags, dot separators clipped at line starts */
 .block--misc { overflow: hidden; overflow: clip; }
