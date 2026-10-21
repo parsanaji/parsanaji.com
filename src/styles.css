@@ -211,7 +211,6 @@ ul, ol { padding: 0; list-style: none; }
   height: 100%;
   display: block;
   z-index: 0;
-  image-rendering: pixelated;       /* crisp cells at DPR 3 (4.5.9) */
 }
 .scrim {
   --scrim-r: calc(var(--gutter) + var(--rail-w));

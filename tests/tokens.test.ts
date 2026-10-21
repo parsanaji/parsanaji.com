@@ -141,7 +141,7 @@ describe('layout contract (3.1.1, 3.4.7, 3.6.4, 3.3.7.8, 4.5.9)', () => {
   it('keeps touch-action auto on the band canvas and pixelated cells', () => {
     expect(CSS).not.toContain('pan-y');
     expect(CSS).toContain('touch-action: auto;');
-    expect(CSS).toContain('image-rendering: pixelated;');
+    expect(CSS).not.toContain('image-rendering: pixelated;'); // 12.14: anti-aliased strokes, no pixel snapping
   });
 
   it('hides the field and scrim under html.no-webgl and the toggle while hidden', () => {

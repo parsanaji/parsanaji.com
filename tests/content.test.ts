@@ -30,7 +30,7 @@ describe('index.html copy (3.1.3)', () => {
       '2025 — to present Software Developer Koreex Systems',
       '2026 — to present AI Specialist / Developer Expedient Labs',
       '2025 Calculus Tutor Saddleback College',
-      'parsanaji.com This site. WebGL2 dither field.',
+      'parsanaji.com This site. WebGL2 dash field.',
       'SolScope Microcap cryptocurrency tracker.',
       'Kaptur Business expense tracker for trades.',
       'Mafia Family and friends game.',
@@ -142,7 +142,7 @@ describe('index.html head and CSP rules (5.2, 4.6.1, 4.6.2)', () => {
 
   it('has the 5.2.2 metadata', () => {
     const tagline = 'I build AI agents, apps, and the systems behind them.';
-    const alt = 'Parsa Naji, I build AI agents, apps, and the systems behind them, over a blue dither field.';
+    const alt = 'Parsa Naji, I build AI agents, apps, and the systems behind them, over a field of blue dashes.';
     for (const tag of [
       '<html lang="en">',
       '<title>Parsa Naji</title>',

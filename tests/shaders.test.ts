@@ -3,14 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { mulberry32 } from '../src/core/prng';
 import { DEFAULT_FIELD } from '../src/field/params';
 import { UNIFORMS_PASS1, UNIFORMS_PASS2 } from '../src/field/renderer';
-import { BAYER8, NOISE_OFFSET, hash3 } from '../src/field/surface';
+import { NOISE_OFFSET, hash3 } from '../src/field/surface';
 
 const read = (path: string): string => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const VERT = read('../src/shaders/fullscreen.vert');
 const NOISE = read('../src/shaders/noise.glsl');
 const SURFACE = read('../src/shaders/surface.frag');
-const DITHER = read('../src/shaders/dither.frag');
-const ALL = { 'fullscreen.vert': VERT, 'noise.glsl': NOISE, 'surface.frag': SURFACE, 'dither.frag': DITHER };
+const DASH_VERT = read('../src/shaders/dash.vert');
+const DASH_FRAG = read('../src/shaders/dash.frag');
+const ALL = { 'fullscreen.vert': VERT, 'noise.glsl': NOISE, 'surface.frag': SURFACE, 'dash.vert': DASH_VERT, 'dash.frag': DASH_FRAG };
+const MARKER = '/* noise.glsl inserted here */';
 
 /** Uniform names in declaration order: `uniform <type> <name>[N];` */
 const uniformsOf = (src: string): string[] => [...src.matchAll(/^uniform\s+\w+\s+(\w+)(?:\[\d+\])?\s*;/gm)].map((m) => m[1]);
@@ -50,14 +52,38 @@ describe('noise.glsl matches src/field/surface.ts (spec 3.3.5, Appendix A §3.4)
   });
 });
 
-describe('dither.frag (spec 3.3.10, Appendix A §3.6)', () => {
-  it('carries the BAYER8 matrix of surface.ts', () => {
-    const literal = /int\[64\]\(([^)]*)\)/.exec(DITHER)?.[1] ?? '';
-    expect(literal.split(',').map((s) => Number(s.trim()))).toEqual([...BAYER8]);
+describe('dash.vert (spec 12.14, pass 2)', () => {
+  it('declares exactly UNIFORMS_PASS2', () => {
+    expect(uniformsOf(DASH_VERT)).toEqual([...UNIFORMS_PASS2]);
   });
 
-  it('declares exactly UNIFORMS_PASS2', () => {
-    expect(uniformsOf(DITHER)).toEqual([...UNIFORMS_PASS2]);
+  it('has exactly one noise.glsl insertion marker (the drift and angle noise run per instance)', () => {
+    expect(DASH_VERT.split(MARKER)).toHaveLength(2);
+  });
+
+  it('builds the quad from gl_VertexID and the cell from gl_InstanceID, with no vertex attributes', () => {
+    expect(DASH_VERT).toContain('gl_InstanceID');
+    expect(DASH_VERT).toContain('gl_VertexID');
+    expect(DASH_VERT).not.toMatch(/^\s*(layout\([^)]*\)\s*)?in\s+\w+\s+\w+\s*;/m);
+  });
+
+  it('writes the Blueprint stroke geometry: half-length sp (lenMin + lenK v), width floored at 1 CSS px', () => {
+    expect(DASH_VERT).toContain('float halfLen = uCell * (uDash.x + uDash.y * v);');
+    expect(DASH_VERT).toContain('float halfW = max(1.0, uCell * uDash.z) * 0.5;');
+    expect(DASH_VERT).toContain('vColor = vec4(ink, uAlpha.x + (1.0 - uAlpha.x) * v);');
+  });
+});
+
+describe('dash.frag (spec 12.14, pass 2)', () => {
+  it('declares no uniforms and reads every varying dash.vert writes', () => {
+    expect(uniformsOf(DASH_FRAG)).toEqual([]);
+    const outs = [...DASH_VERT.matchAll(/^out\s+(\w+)\s+(\w+);/gm)];
+    expect(outs.length).toBeGreaterThan(0);
+    for (const [, type, name] of outs) expect(DASH_FRAG).toContain(`in ${type} ${name};`);
+  });
+
+  it('emits premultiplied alpha for the ONE / ONE_MINUS_SRC_ALPHA blend', () => {
+    expect(DASH_FRAG).toContain('outColor = vec4(vColor.rgb * a, a);');
   });
 });
 
@@ -67,7 +93,13 @@ describe('surface.frag (spec 3.3.4, 3.4.5, Appendix A §3.5)', () => {
   });
 
   it('has exactly one noise.glsl insertion marker', () => {
-    expect(SURFACE.split('/* noise.glsl inserted here */')).toHaveLength(2);
+    expect(SURFACE.split(MARKER)).toHaveLength(2);
+  });
+
+  it('takes uLevel as (level, gain, dither-curve mix) and mixes the curve by uLevel.z (12.14)', () => {
+    expect(SURFACE).toContain('uniform vec3  uLevel;');
+    expect(SURFACE).toContain('v = clamp((v - uLevel.x) * uLevel.y, 0.0, 1.0);');
+    expect(SURFACE).toContain('return v + (shaped - v) * uLevel.z;');
   });
 
   it('every smoothstep has ascending edges (theta - w, theta + w with w = mask.edge > 0)', () => {
@@ -80,13 +112,17 @@ describe('surface.frag (spec 3.3.4, 3.4.5, Appendix A §3.5)', () => {
   });
 });
 
-describe('all four shader files (spec 4.5.8)', () => {
+describe('all five shader files (spec 4.5.8)', () => {
   it.each(Object.entries(ALL))('%s has no #version line (program.ts prepends the header) and no pow()', (_name, src) => {
     expect(src).not.toContain('#version');
     expect(src).not.toMatch(/\bpow\s*\(/);
   });
 
-  it('the vertex shader reads attribute 0 as aPos', () => {
+  it('the fullscreen vertex shader reads attribute 0 as aPos', () => {
     expect(VERT).toContain('layout(location = 0) in vec2 aPos;');
+  });
+
+  it('src/shaders/dither.frag is gone (12.14 replaced the Bayer pass)', () => {
+    expect(() => read('../src/shaders/dither.frag')).toThrow();
   });
 });

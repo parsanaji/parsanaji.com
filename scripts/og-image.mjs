@@ -1,19 +1,20 @@
 // Generates public/og.png (1200x630) and the three favicon PNGs. Run by hand: npm run og (spec 4.10).
 // Outputs are committed; CI never runs this script, so the build never depends on harfbuzz or wasm (4.10.1).
-// The dither band comes from src/field/surface.ts, the module the unit tests pin (Node >= 22.18 strips its types, 4.10.2).
+// The dash band comes from src/field/surface.ts, the module the unit tests pin (Node >= 22.18 strips its types, 4.10.2).
 // Text is drawn as glyph outlines (harfbuzzjs), so no system font or fontconfig is involved (4.10.5).
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import fontverter from 'fontverter';
 import * as hb from 'harfbuzzjs';
 import sharp from 'sharp';
-import { tierGrid } from '../src/field/surface.ts';
+import { DASH_STRIDE, dashGrid } from '../src/field/surface.ts';
 
 const W = 1200;
 const H = 630;
-const CELL = 6; // CSS px per dither cell: 200 x 105 cells (4.10.3)
-const COLS = W / CELL;
-const ROWS = H / CELL;
+const SP = 11.04; // dash spacing: 0.0092 x 1200 (12.14 dense), 109 x 58 strokes
+const COLS = Math.ceil(W / SP);
+const ROWS = Math.ceil(H / SP);
+const INTENSITY = 1.7; // lively (INTENSITY_K): the drift amplitude of the still
 const TAU = 12; // flow time in s: the reduced-motion still (4.9 staticTimeS)
 // No Shockwave ring: in a still any ring reads as solid white blobs, so the band is the plain field (4.10.3 as amended).
 // Dark look (3.2.8, Appendix B §5.2).
@@ -79,22 +80,22 @@ function wrap(font, text, sizePx, maxPx) {
   return lines;
 }
 
-// 1. Dither band: the shared math, upscaled exactly 6x with nearest-neighbour (4.10.3).
-const tiers = tierGrid(COLS, ROWS, CELL, TAU, 1);
-const palette = TIER_HEX.map(rgb);
-const raster = Buffer.alloc(COLS * ROWS * 4);
-for (let i = 0; i < tiers.length; i++) {
-  const [r, g, b] = palette[tiers[i]];
-  raster[i * 4] = r;
-  raster[i * 4 + 1] = g;
-  raster[i * 4 + 2] = b;
-  raster[i * 4 + 3] = 255;
+// 1. Dash band: the shared lattice math drawn as round-capped SVG lines over the field-0 ground (4.10.3 as amended by 12.14).
+const strokes = dashGrid(COLS, ROWS, SP, TAU, INTENSITY);
+const lines = [];
+for (let o = 0; o < strokes.length; o += DASH_STRIDE) {
+  const [x, y, angle, halfLen, halfWidth, alpha, tier] = strokes.subarray(o, o + DASH_STRIDE);
+  const dx = Math.cos(angle) * halfLen;
+  const dy = Math.sin(angle) * halfLen;
+  lines.push(
+    `<line x1="${(x - dx).toFixed(2)}" y1="${(y - dy).toFixed(2)}" x2="${(x + dx).toFixed(2)}" y2="${(y + dy).toFixed(2)}" stroke="${TIER_HEX[tier]}" stroke-opacity="${alpha.toFixed(3)}" stroke-width="${(2 * halfWidth).toFixed(2)}"/>`,
+  );
 }
-const band = await sharp(raster, { raw: { width: COLS, height: ROWS, channels: 4 } })
-  .resize(COLS * CELL, ROWS * CELL, { kernel: 'nearest' })
-  .extract({ left: 0, top: 0, width: W, height: H })
-  .png()
-  .toBuffer();
+const bandSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<rect width="${W}" height="${H}" fill="${BG}"/>
+<g stroke-linecap="round">${lines.join('')}</g>
+</svg>`;
+const band = await sharp(Buffer.from(bandSvg)).png().toBuffer();
 
 // 2. Scrim and text as outlines (4.10.4, 4.10.5).
 const bold = await loadFont('JetBrainsMono-Bold.woff2');

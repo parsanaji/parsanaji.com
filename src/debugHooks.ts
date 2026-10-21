@@ -38,7 +38,7 @@ export function installDebugHooks(app: App, win: Window): PnHooks {
           const gpu = px[(j * grid.cols + i) * 4] / 255;
           const cpu = surface((i + 0.5) * grid.cellCss, (j + 0.5) * grid.cellCss, frame.z, d.params.shape);
           maxErr = Math.max(maxErr, Math.abs(gpu - cpu));
-          if (tierOf(gpu, i, j, t2, t3) !== tierOf(cpu, i, j, t2, t3)) mismatch++;
+          if (tierOf(gpu, t2, t3) !== tierOf(cpu, t2, t3)) mismatch++;
         }
       }
       const cells = grid.cols * grid.rows;

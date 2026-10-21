@@ -1,7 +1,7 @@
 # parsanaji.com
 
-Personal domain. Phase 1 teaser: the name in GPU particles (Three.js), one screen, no scroll.
-Spec: `docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md`. Plan: `docs/superpowers/plans/2026-10-16-parsanaji-teaser.md`.
+Personal domain. One-screen résumé over a WebGL2 field of flowing blue dashes (two-pass raw WebGL2, no framework); dark and light looks, an entry where the name forms in the field.
+Spec: `docs/superpowers/specs/2026-10-19-parsanaji-resume-screen-design.md` (§12.14: the dashes field). Plan: `docs/superpowers/plans/2026-10-19-parsanaji-resume-screen.md`.
 
 ## Run
 

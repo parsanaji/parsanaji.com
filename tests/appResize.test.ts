@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { App, type AppOptions } from '../src/app';
 import { DEFAULT_FIELD, cloneField } from '../src/field/params';
 import type { FrameInputs } from '../src/field/renderer';
-import { computeGrid } from '../src/field/sizing';
-import { cellCssFor } from '../src/field/sizing';
+import { computeGrid, dashSpacingFor } from '../src/field/sizing';
 import type { FieldColors, RGB } from '../src/theme/theme';
 
 // Slice-2 review I1 (spec 12.11): setting canvas.width/height in the ResizeObserver callback clears the drawing buffer
@@ -58,8 +57,8 @@ describe('App.resize redraw (slice-2 review I1; spec 3.7.1, 6.1.3, amendment 12.
     expect(after.breath).toBe(before.breath);
     expect(after.maskE).toBe(before.maskE);
     expect(after.colors).toEqual(before.colors);
-    const cellCss = cellCssFor(1280, h.params.cell, h.params.density, 1);
-    expect(h.app.grid).toEqual(computeGrid(1280, 720, 1, cellCss, undefined));
+    const sp = dashSpacingFor(1280, 720, h.params.dash, h.params.density, 1);
+    expect(h.app.grid).toEqual(computeGrid(1280, 720, 1, sp, undefined));
     expect(h.clears).toHaveLength(0);
   });
 

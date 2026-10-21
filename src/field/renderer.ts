@@ -1,11 +1,13 @@
 import { createContext } from '../gl/context';
 import { startProgram, type PendingProgram, type ProgramHandle } from '../gl/program';
 import { createFullscreenTriangle, createMaskTexture, createSurfaceTarget, deleteSurfaceTarget, type SurfaceTarget } from '../gl/targets';
-import ditherFrag from '../shaders/dither.frag?raw';
+import dashFrag from '../shaders/dash.frag?raw';
+import dashVert from '../shaders/dash.vert?raw';
 import fullscreenVert from '../shaders/fullscreen.vert?raw';
 import noiseGlsl from '../shaders/noise.glsl?raw';
 import surfaceFrag from '../shaders/surface.frag?raw';
 import type { FieldColors, RGB } from '../theme/theme';
+import { INTENSITY_K } from './flow';
 import type { MaskPlane } from './nameMask';
 import type { FieldParams } from './params';
 import type { Grid } from './sizing';
@@ -16,10 +18,12 @@ export type { FieldColors } from '../theme/theme'; // P1
 export const UNIFORMS_PASS1: readonly string[] = Object.freeze([
   'uCell', 'uZ', 'uZm', 'uCenter', 'uBreath', 'uPointer', 'uWarp', 'uRipples', 'uRipple', 'uMask', 'uMaskSize', 'uE', 'uMaskMix', 'uShape', 'uLevel',
 ]);
-/** Pass-2 uniforms in declaration order (Appendix A §3.6, spec 10.2). */
-export const UNIFORMS_PASS2: readonly string[] = Object.freeze(['uSurf', 'uCellDev', 'uCanvasH', 'uField0', 'uField1', 'uField2', 'uField3', 'uTiers']);
+/** Pass-2 uniforms in declaration order (dash.vert; 12.14). The dash fragment shader declares none. */
+export const UNIFORMS_PASS2: readonly string[] = Object.freeze([
+  'uSurf', 'uCols', 'uView', 'uCell', 'uDpr', 'uZd', 'uPointer', 'uE', 'uDash', 'uDash2', 'uField1', 'uField2', 'uField3', 'uTiers', 'uAlpha',
+]);
 
-/** Everything one frame uploads (spec 4.4.3 step 4). Field-space CSS px; `ripples` is 8 × vec4. */
+/** Everything one frame uploads (spec 4.4.3 step 4). Field-space CSS px; `z` is flowZ's 9 values; `ripples` is 8 × vec4. */
 export interface FrameInputs {
   z: Float32Array; breath: number; center: [number, number];
   pointer: { x: number; y: number; radius: number; strength: number };
@@ -27,17 +31,19 @@ export interface FrameInputs {
 }
 
 const NOISE_MARKER = '/* noise.glsl inserted here */';
-/** Spec 4.5.3: the uniform block, then noise.glsl, then the body; startProgram prepends GLSL_HEADER_FRAG. */
+/** Spec 4.5.3: the uniform block, then noise.glsl, then the body; startProgram prepends the GLSL header. */
 const PASS1_SOURCE = surfaceFrag.replace(NOISE_MARKER, noiseGlsl);
+const PASS2_VERT = dashVert.replace(NOISE_MARKER, noiseGlsl);
 const EMPTY_MASK = new Uint8Array(1);
 
 type Uniforms = Readonly<Record<string, WebGLUniformLocation>>;
 
 /**
- * Owns every GL object of the field and draws it in two passes (spec 4.5): pass 1 evaluates one texel per cell
- * into the surface target, pass 2 dithers it to device pixels. Exactly two drawArrays(TRIANGLES, 0, 3) per render.
+ * Owns every GL object of the field and draws it in two passes (spec 4.5 as amended by 12.14): pass 1 evaluates one
+ * texel per lattice cell into the surface target, pass 2 clears the canvas to field-0 and draws one anti-aliased
+ * stroke per cell with a single instanced draw. Exactly two draw calls per render.
  */
-export class DitherRenderer {
+export class FieldRenderer {
   private readonly canvas: HTMLCanvasElement;
   private glc: WebGL2RenderingContext | null;
   private params: FieldParams;
@@ -46,6 +52,7 @@ export class DitherRenderer {
   private p1: ProgramHandle | null = null;
   private p2: ProgramHandle | null = null;
   private tri: { vao: WebGLVertexArrayObject; vbo: WebGLBuffer } | null = null;
+  private quad: WebGLVertexArrayObject | null = null; // no attributes: dash.vert builds the quad from gl_VertexID
   private target: SurfaceTarget | null = null;
   private mask: WebGLTexture | null = null;
   private emptyMask: WebGLTexture | null = null;
@@ -64,11 +71,11 @@ export class DitherRenderer {
     this.build(gl);
   }
 
-  /** Context, triangle, empty mask and both programs started (async when the extension exists). Null on any failure. */
-  static create(canvas: HTMLCanvasElement, params: FieldParams): DitherRenderer | null {
+  /** Context, geometry, empty mask and both programs started (async when the extension exists). Null on any failure. */
+  static create(canvas: HTMLCanvasElement, params: FieldParams): FieldRenderer | null {
     try {
       const gl = createContext(canvas);
-      return gl ? new DitherRenderer(canvas, gl, params) : null;
+      return gl ? new FieldRenderer(canvas, gl, params) : null;
     } catch {
       return null;
     }
@@ -158,7 +165,7 @@ export class DitherRenderer {
     this.mask = createMaskTexture(gl, plane.width, plane.height, plane.data);
   }
 
-  /** Spec 4.5.5 "on change" uniforms: uWarp, uRipple.y, uMaskMix, uShape, uLevel, uTiers. */
+  /** Spec 4.5.5 "on change" uniforms: uWarp, uRipple.y, uMaskMix, uShape, uLevel, uDash, uDash2, uTiers, uAlpha. */
   setParams(p: FieldParams): void {
     this.params = p;
     this.paramsDirty = true;
@@ -167,21 +174,23 @@ export class DitherRenderer {
   /** One frame: pass 1 into the surface target, pass 2 to the canvas. A no-op until ready, or while lost. */
   render(f: FrameInputs): void {
     const gl = this.glc;
-    if (!gl || !this.ready || gl.isContextLost() || !this.target || !this.gridValue || !this.tri || !this.p1 || !this.p2) return;
+    if (!gl || !this.ready || gl.isContextLost() || !this.target || !this.gridValue || !this.tri || !this.quad || !this.p1 || !this.p2) return;
     const g = this.gridValue;
     const u1 = this.u1();
     const u2 = this.u2();
-    gl.bindVertexArray(this.tri.vao);
 
     // pass 1: one texel per cell (Appendix A §3.5)
+    gl.bindVertexArray(this.tri.vao);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.target.fbo);
     gl.viewport(0, 0, this.target.cols, this.target.rows);
     gl.useProgram(this.p1.program);
     if (this.gridDirty) {
       gl.uniform1f(u1.uCell ?? null, g.cellCss);
       gl.useProgram(this.p2.program);
-      gl.uniform1f(u2.uCellDev ?? null, g.cellDev);
-      gl.uniform1f(u2.uCanvasH ?? null, g.heightDev);
+      gl.uniform1i(u2.uCols ?? null, g.cols);
+      gl.uniform2f(u2.uView ?? null, g.cssW, g.cssH);
+      gl.uniform1f(u2.uCell ?? null, g.cellCss);
+      gl.uniform1f(u2.uDpr ?? null, g.dpr);
       gl.useProgram(this.p1.program);
       this.gridDirty = false;
     }
@@ -197,22 +206,31 @@ export class DitherRenderer {
     gl.uniform4fv(u1.uRipples ?? null, f.ripples);
     gl.uniform2f(u1.uRipple ?? null, f.rippleSigma, this.params.ripple.gain);
     gl.uniform2f(u1.uMaskSize ?? null, this.maskSize[0], this.maskSize[1]);
-    gl.uniform1f(u1.uE ?? null, this.mask ? f.maskE : 0);
+    const e = this.mask ? f.maskE : 0;
+    gl.uniform1f(u1.uE ?? null, e);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.mask ?? this.emptyMask);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-    // pass 2: Bayer 8 x 8 tiers to device pixels (Appendix A §3.6)
+    // pass 2: field-0 clear, then one instanced stroke per cell, premultiplied over it (12.14)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, g.widthDev, g.heightDev);
+    gl.clearColor(f.colors.f0[0], f.colors.f0[1], f.colors.f0[2], 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.p2.program);
-    gl.uniform3f(u2.uField0 ?? null, f.colors.f0[0], f.colors.f0[1], f.colors.f0[2]);
+    gl.uniform3f(u2.uZd ?? null, f.z[6], f.z[7], f.z[8]);
+    gl.uniform4f(u2.uPointer ?? null, f.pointer.x, f.pointer.y, f.pointer.radius, f.pointer.strength);
+    gl.uniform1f(u2.uE ?? null, e);
     gl.uniform3f(u2.uField1 ?? null, f.colors.f1[0], f.colors.f1[1], f.colors.f1[2]);
     gl.uniform3f(u2.uField2 ?? null, f.colors.f2[0], f.colors.f2[1], f.colors.f2[2]);
     gl.uniform3f(u2.uField3 ?? null, f.colors.f3[0], f.colors.f3[1], f.colors.f3[2]);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.target.tex);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindVertexArray(this.quad);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, g.cols * g.rows);
+    gl.disable(gl.BLEND);
     gl.bindVertexArray(null);
   }
 
@@ -227,7 +245,7 @@ export class DitherRenderer {
     return true;
   }
 
-  /** After webglcontextrestored (3.6.3): rebuilds programs, triangle, target and mask. `ready` must be polled again. */
+  /** After webglcontextrestored (3.6.3): rebuilds programs, geometry, target and mask. `ready` must be polled again. */
   restore(): boolean {
     const gl = this.glc;
     if (!gl || gl.isContextLost()) return false;
@@ -266,19 +284,23 @@ export class DitherRenderer {
       gl.deleteVertexArray(this.tri.vao);
       gl.deleteBuffer(this.tri.vbo);
     }
+    if (this.quad) gl.deleteVertexArray(this.quad);
     this.p1 = this.p2 = null;
     this.target = null;
     this.mask = this.emptyMask = null;
     this.tri = null;
+    this.quad = null;
   }
 
   private build(gl: WebGL2RenderingContext): void {
     // extensions do not survive a context loss: enable it again on every (re)build
     this.parallel = gl.getExtension('KHR_parallel_shader_compile');
     this.tri = createFullscreenTriangle(gl);
+    this.quad = gl.createVertexArray();
+    if (!this.quad) throw new Error('vertex array unavailable (context lost)');
     // a 1 x 1 zero mask keeps texture unit 1 bound while no name is shown (no "no texture bound" render warning)
     this.emptyMask = createMaskTexture(gl, 1, 1, EMPTY_MASK);
-    this.pending = [startProgram(gl, fullscreenVert, PASS1_SOURCE, this.parallel), startProgram(gl, fullscreenVert, ditherFrag, this.parallel)];
+    this.pending = [startProgram(gl, fullscreenVert, PASS1_SOURCE, this.parallel), startProgram(gl, PASS2_VERT, dashFrag, this.parallel)];
   }
 
   private writeParams(gl: WebGL2RenderingContext, u1: Uniforms, u2: Uniforms): void {
@@ -286,10 +308,13 @@ export class DitherRenderer {
     gl.uniform2f(u1.uWarp ?? null, p.pointer.warpK, p.pointer.boost);
     gl.uniform4f(u1.uMaskMix ?? null, p.mask.holdDim, p.mask.ink, p.mask.edge, p.mask.meltPx);
     gl.uniform3f(u1.uShape ?? null, p.shape.warpScalePx, p.shape.mainScalePx, p.shape.warpAmp);
-    gl.uniform2f(u1.uLevel ?? null, p.shape.level, p.shape.gain);
+    gl.uniform3f(u1.uLevel ?? null, p.shape.level, p.shape.gain, p.shape.shapeK);
     if (this.p2) {
       gl.useProgram(this.p2.program);
+      gl.uniform4f(u2.uDash ?? null, p.dash.lenMin, p.dash.lenK, p.dash.widthK, p.dash.flowAmp);
+      gl.uniform4f(u2.uDash2 ?? null, INTENSITY_K[p.intensity], p.dash.repelK, p.dash.flowScalePx, p.dash.angleScalePx);
       gl.uniform2f(u2.uTiers ?? null, p.tiers.t2, p.tiers.t3);
+      gl.uniform2f(u2.uAlpha ?? null, p.dash.alphaMin, p.dash.color === 'muted' ? 1 : 0);
       if (this.p1) gl.useProgram(this.p1.program);
     }
   }

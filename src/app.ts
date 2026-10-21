@@ -7,9 +7,9 @@ import { breathScale, effectiveIntensity } from './field/flow';
 import { MASK_FONT_FAMILY, maskBoxFor, rasterizeMask, type Canvas2DLike, type MaskBox } from './field/nameMask';
 import type { FieldParams } from './field/params';
 import { PointerModel, type PointerKind } from './field/pointer';
-import { DitherRenderer, type FrameInputs } from './field/renderer';
+import { FieldRenderer, type FrameInputs } from './field/renderer';
 import { RipplePool } from './field/ripples';
-import { BAND_QUERY, cellCssFor, computeGrid, latticeSpacing, pointerRadius, type Grid } from './field/sizing';
+import { BAND_QUERY, computeGrid, dashSpacingFor, pointerRadius, type Grid } from './field/sizing';
 import { flowZ } from './field/surface';
 import { bindLifecycle, type LifecycleTarget } from './lifecycle';
 import { createLoop, type Loop } from './loop';
@@ -22,7 +22,7 @@ export interface AppOptions {
 
 /** P4: what the debug hooks and the panel reach; it exists in every build but only PN_DEBUG code calls it. */
 export interface AppDebug {
-  readonly renderer: DitherRenderer;
+  readonly renderer: FieldRenderer;
   readonly params: FieldParams;
   lastFrame(): FrameInputs | null; // inputs of the last render
   setFrozen(frozen: boolean): void; // freezes sim time and τ (panel "freeze time")
@@ -47,7 +47,7 @@ function isRunning(m: EntryMachine | null): boolean {
 export class App implements LifecycleTarget {
   private readonly o: AppOptions;
   private readonly params: FieldParams;
-  private readonly renderer: DitherRenderer;
+  private readonly renderer: FieldRenderer;
   private readonly loop: Loop;
   private readonly pointer: PointerModel;
   private readonly ripples: RipplePool;
@@ -66,7 +66,7 @@ export class App implements LifecycleTarget {
   private disposed = false;
   private readonly fallbackFns: (() => void)[] = [];
   private unbinds: (() => void)[] = [];
-  private readonly zBuf = new Float32Array(6);
+  private readonly zBuf = new Float32Array(9);
   private readonly rippleBuf = new Float32Array(32);
   private last: FrameInputs | null = null;
   private pendingColors: FieldColors | null = null;
@@ -81,7 +81,7 @@ export class App implements LifecycleTarget {
   private idling = false; // 3.6.4: the last frame returned idle; wakeIfIdle() restarts the loop
   private konamiM: EntryMachine | null = null; // 3.4.11: the running (or last) Konami
 
-  private constructor(o: AppOptions, renderer: DitherRenderer) {
+  private constructor(o: AppOptions, renderer: FieldRenderer) {
     this.o = o;
     this.params = o.params;
     this.renderer = renderer;
@@ -99,7 +99,7 @@ export class App implements LifecycleTarget {
 
   /** Spec 4.7.4 steps 1, 2 and 7: renderer, first clear, lifecycle, pointer listeners, loop. Null = no field. */
   static start(o: AppOptions): App | null {
-    const renderer = DitherRenderer.create(o.canvas, o.params);
+    const renderer = FieldRenderer.create(o.canvas, o.params);
     if (!renderer) return null;
     try {
       const app = new App(o, renderer);
@@ -312,7 +312,7 @@ export class App implements LifecycleTarget {
       this.pointer.tick(dtMs);
       const w = this.rect.width;
       const h = this.rect.height;
-      const sp = latticeSpacing(w);
+      const sp = this.gridValue ? this.gridValue.cellCss : 10; // 12.14: the dash spacing is the lattice unit of rings and the pointer
       this.ripples.write(this.simMs / 1000, sp, this.rippleBuf);
       const e = this.stepMask(dtMs, this.o.doc.visibilityState === 'visible');
       if (this.pendingColors) {
@@ -328,7 +328,7 @@ export class App implements LifecycleTarget {
         pointer: {
           x: this.pointer.x,
           y: this.pointer.y,
-          radius: pointerRadius(w, h, p.pointer) * (1 + p.pointer.velRadiusGain * this.pointer.velFactor),
+          radius: pointerRadius(w, h, sp, p.pointer) * (1 + p.pointer.velRadiusGain * this.pointer.velFactor),
           strength: this.pointer.strength,
         },
         ripples: this.rippleBuf,
@@ -343,7 +343,7 @@ export class App implements LifecycleTarget {
         return false;
       }
       if (this.probe && !this.probe.done && this.probe.push(dtMs) === 'degrade') {
-        this.degrade = p.cell.degradeK; // 3.7.9: once per session
+        this.degrade = p.dash.degradeK; // 3.7.9: once per session
         this.regrid();
       }
       return !this.idle();
@@ -387,8 +387,8 @@ export class App implements LifecycleTarget {
   /** Spec 3.7.1: measure the canvas box, size the grid, resize the backing store and target, cache the rect. */
   private regrid(deviceBox?: { w: number; h: number } | null): void {
     const r = this.measure();
-    const cellCss = cellCssFor(r.width, this.params.cell, this.params.density, this.degrade);
-    this.gridValue = computeGrid(r.width, r.height, this.o.win.devicePixelRatio, cellCss, deviceBox);
+    const sp = dashSpacingFor(r.width, r.height, this.params.dash, this.params.density, this.degrade);
+    this.gridValue = computeGrid(r.width, r.height, this.o.win.devicePixelRatio, sp, deviceBox);
     this.renderer.resize(this.gridValue);
     this.scheduleMaskRaster(); // 3.7.1: an active mask is re-rasterised 150 ms after the last resize
   }

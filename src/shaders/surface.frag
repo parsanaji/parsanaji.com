@@ -12,13 +12,14 @@ uniform vec2  uMaskSize;    // CSS px covered by the mask texture
 uniform float uE;           // mask progress 0..1 (0 = field only)
 uniform vec4  uMaskMix;     // x = hold dim (0.3), y = ink floor (0.91), z = dissolve edge (0.08), w = melt px (48)
 uniform vec3  uShape;       // x = warp scale px (240), y = main scale px (160), z = warp amplitude (2.6)
-uniform vec2  uLevel;       // x = level (0.3), y = gain (2.1)
+uniform vec3  uLevel;       // x = level (0.25), y = gain (1.9), z = dither-curve mix (0 = plain fbm, 12.14)
 
 out vec4 outColor;
 
 /* noise.glsl inserted here */
 
-// Blueprint vAt(), raster + dither branch, at CSS-px sample s. warp returns (wx, wy) - 0.5 for the mask melt.
+// Blueprint vAt() at CSS-px sample s: the non-raster branch when uShape.z and uLevel.z are 0 (12.14), the raster +
+// dither branch when they are 2.6 and 1. warp returns (wx, wy) - 0.5 for the mask melt.
 float surface(vec2 s, out vec2 warp) {
   vec2 a = s / uShape.x + OFFSET;
   float wx = fbm(a + vec2(3.1, 0.0), uZ.xy);
@@ -26,7 +27,8 @@ float surface(vec2 s, out vec2 warp) {
   warp = vec2(wx, wy) - 0.5;
   float v = fbm(s / uShape.y + OFFSET + warp * uShape.z, uZm);
   v = clamp((v - uLevel.x) * uLevel.y, 0.0, 1.0);
-  return min(1.0, v * 0.7 + 0.4 * (1.0 - abs(1.0 - 2.0 * v)) * v);
+  float shaped = min(1.0, v * 0.7 + 0.4 * (1.0 - abs(1.0 - 2.0 * v)) * v);
+  return v + (shaped - v) * uLevel.z;
 }
 
 void main() {

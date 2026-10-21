@@ -3,18 +3,20 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { mulberry32 } from '../src/core/prng';
 import {
-  BAYER8,
-  BLUEPRINT_SHAPE,
+  BLUEPRINT_DASH,
+  DASH_SHAPE,
+  DASH_STRIDE,
+  FLOW_K,
   NOISE_OFFSET,
   Z_PERIOD,
-  bayerThreshold,
+  dashAt,
+  dashGrid,
   fbm,
   flowZ,
   hash3,
   noise3,
   ringGain,
   surface,
-  tierGrid,
   tierOf,
   type Ring,
 } from '../src/field/surface';
@@ -23,24 +25,7 @@ import {
 // prettier-ignore
 function blueprintHash(x: number, y: number, z: number): number { let h=Math.imul(x|0,374761393)^Math.imul(y|0,668265263)^Math.imul(z|0,1013904223); h=Math.imul(h^(h>>>13),1274126177); h^=h>>>16; return (h>>>0)/4294967296; }
 
-// Blueprint part-c.html line 144, verbatim.
-// prettier-ignore
-const BLUEPRINT_BAYER8 = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
-
-const fnv1a = (bytes: Uint8Array): number => {
-  let h = 0x811c9dc5;
-  for (const b of bytes) {
-    h ^= b;
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-};
-
-const coverage = (tiers: Uint8Array): number[] => {
-  const c = [0, 0, 0, 0];
-  for (const t of tiers) c[t] += 1;
-  return c.map((n) => (100 * n) / tiers.length);
-};
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 
 describe('hash3 (3.3.5)', () => {
   it('equals the verbatim Blueprint hash on 1000 seeded integer triples with z in [0, 256)', () => {
@@ -103,19 +88,25 @@ describe('noise3 and fbm (3.3.5)', () => {
   });
 });
 
-describe('flowZ (3.3.6.2)', () => {
+describe('flowZ (3.3.6.2 as amended by 12.14)', () => {
   const rawZ = (t: number): number[] => {
     const zA = 0.09 * t;
     const zB = zA + 2;
-    const zC = 0.14 * t;
-    return [zA, 1.4 * zA + 3.1, zB, 1.4 * zB + 3.1, zC, 1.4 * zC + 3.1];
+    const zC = 0.22 * t;
+    const zD = 0.18 * t;
+    const zE = 0.1 * t;
+    return [zA, 1.4 * zA + 3.1, zB, 1.4 * zB + 3.1, zC, 1.4 * zC + 3.1, zD, zD + 5, zE];
   };
   const mod256 = (z: number): number => z - 256 * Math.floor(z / 256);
 
-  it('returns six values in [0, 256) equal to the raw formula mod 256', () => {
+  it('carries the Blueprint speeds: warp 0.09, main 0.22, drift 0.18, angle 0.1', () => {
+    expect(FLOW_K).toEqual({ warp: 0.09, main: 0.22, dash: 0.18, angle: 0.1 });
+  });
+
+  it('returns nine values in [0, 256) equal to the raw formula mod 256', () => {
     for (const t of [0, 1, 12, 300, 2844.5, 86_400, 1e6]) {
       const z = flowZ(t, 1);
-      expect(z).toHaveLength(6);
+      expect(z).toHaveLength(9);
       rawZ(t).forEach((raw, k) => {
         expect(z[k]).toBeGreaterThanOrEqual(0);
         expect(z[k]).toBeLessThan(256);
@@ -125,7 +116,7 @@ describe('flowZ (3.3.6.2)', () => {
   });
 
   it('scales time by the intensity and fills the given buffer', () => {
-    const out = new Float32Array(6);
+    const out = new Float32Array(9);
     expect(flowZ(10, 1.7, out)).toBe(out);
     const ref = flowZ(17, 1);
     out.forEach((z, k) => expect(z).toBeCloseTo(ref[k], 5));
@@ -135,12 +126,12 @@ describe('flowZ (3.3.6.2)', () => {
     expect(flowZ((256 - 1e-6) / 0.09, 1)[0]).toBe(0);
   });
 
-  it('keeps the surface continuous across the zA wrap at t = 256 / 0.09', () => {
-    const t0 = 256 / 0.09;
+  it('keeps the surface continuous across the main z wrap at t = 256 / 0.22', () => {
+    const t0 = 256 / 0.22;
     const before = flowZ(t0 - 1e-4, 1);
     const after = flowZ(t0 + 1e-4, 1);
-    expect(before[0]).toBeGreaterThan(255.99);
-    expect(after[0]).toBeLessThan(0.01);
+    expect(before[4]).toBeGreaterThan(255.99);
+    expect(after[4]).toBeLessThan(0.01);
     const r = mulberry32(5);
     for (let k = 0; k < 500; k++) {
       const x = r() * 1440;
@@ -150,52 +141,59 @@ describe('flowZ (3.3.6.2)', () => {
   });
 });
 
-describe('surface (3.3.4, 3.3.10 reachability)', () => {
-  it('never exceeds the dither-curve peak 0.703125, so the boost alone never reaches field-3', () => {
+describe('surface (3.3.4 as amended by 12.14)', () => {
+  it('is the plain Blueprint non-raster field: clamp((fbm(p / 141.18 + 256) - 0.25) x 1.9), no warp, no curve', () => {
+    expect(DASH_SHAPE).toEqual({ warpScalePx: 240, mainScalePx: 141.18, warpAmp: 0, level: 0.25, gain: 1.9, shapeK: 0 });
+    const z = flowZ(12, 1);
     const r = mulberry32(6);
+    for (let k = 0; k < 500; k++) {
+      const x = r() * 1440;
+      const y = r() * 900;
+      const expected = clamp01((fbm(x / 141.18 + NOISE_OFFSET, y / 141.18 + NOISE_OFFSET, z[4], z[5]) - 0.25) * 1.9);
+      expect(surface(x, y, z)).toBe(expected);
+      expect(surface(x, y, z, DASH_SHAPE)).toBe(expected);
+    }
+  });
+
+  it('stays in [0, 1] and reaches both ends over the dense Blueprint distribution', () => {
+    const r = mulberry32(7);
+    let min = 1;
     let max = 0;
     for (let k = 0; k < 100_000; k++) {
       const v = surface(r() * 3000, r() * 2000, flowZ(r() * 4000, 1));
       expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1);
+      if (v < min) min = v;
       if (v > max) max = v;
     }
-    expect(max).toBeLessThanOrEqual(0.703125 + 1e-12);
-    expect(max + 0.12).toBeLessThan(0.9);
+    expect(min).toBe(0);
+    expect(max).toBeGreaterThan(0.95);
   });
 
-  it('defaults to the Blueprint shape', () => {
-    expect(BLUEPRINT_SHAPE).toEqual({ warpScalePx: 240, mainScalePx: 160, warpAmp: 2.6, level: 0.3, gain: 2.1 });
+  it('shapeK mixes in the dither curve min(1, 0.7 v + 0.4 (1 - |1 - 2v|) v)', () => {
     const z = flowZ(12, 1);
-    expect(surface(333, 444, z)).toBe(surface(333, 444, z, BLUEPRINT_SHAPE));
+    const r = mulberry32(8);
+    for (let k = 0; k < 200; k++) {
+      const x = r() * 1440;
+      const y = r() * 900;
+      const v = surface(x, y, z);
+      const shaped = Math.min(1, v * 0.7 + 0.4 * (1 - Math.abs(1 - 2 * v)) * v);
+      expect(surface(x, y, z, { ...DASH_SHAPE, shapeK: 1 })).toBeCloseTo(shaped, 12);
+      expect(surface(x, y, z, { ...DASH_SHAPE, shapeK: 0.5 })).toBeCloseTo((v + shaped) / 2, 12);
+    }
   });
 });
 
-describe('Bayer tiers (3.3.10)', () => {
-  it('BAYER8 is the Blueprint matrix and a permutation of 0..63', () => {
-    expect([...BAYER8]).toEqual(BLUEPRINT_BAYER8);
-    expect([...BAYER8].sort((a, b) => a - b)).toEqual(Array.from({ length: 64 }, (_, i) => i));
-  });
-
-  it('bayerThreshold spans [1/128, 127/128] and repeats every 8 cells', () => {
-    const all: number[] = [];
-    for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) all.push(bayerThreshold(i, j));
-    expect(Math.min(...all)).toBe(1 / 128);
-    expect(Math.max(...all)).toBe(127 / 128);
-    expect(bayerThreshold(3 + 8, 5 + 16)).toBe(bayerThreshold(3, 5));
-  });
-
-  it('tierOf uses strict > at the Bayer threshold, 0.66 and 0.9', () => {
-    // cell (0, 0) has B = 0, threshold 1/128
-    expect(tierOf(1 / 128, 0, 0)).toBe(0);
-    expect(tierOf(1 / 128 + 1e-9, 0, 0)).toBe(1);
-    expect(tierOf(0.66, 0, 0)).toBe(1);
-    expect(tierOf(0.66 + 1e-9, 0, 0)).toBe(2);
-    expect(tierOf(0.9, 0, 0)).toBe(2);
-    expect(tierOf(0.9 + 1e-9, 0, 0)).toBe(3);
-    // cell (7, 7) has B = 21: threshold 21.5 / 64
-    expect(tierOf(0.3, 7, 7)).toBe(0);
-    expect(tierOf(0.34, 7, 7)).toBe(1);
-    expect(tierOf(0.7, 0, 0, 0.75, 0.95)).toBe(1);
+describe('tierOf (12.14, Blueprint colour core)', () => {
+  it('uses strict > at 0.68 and 0.85, and custom thresholds', () => {
+    expect(tierOf(0)).toBe(1);
+    expect(tierOf(0.68)).toBe(1);
+    expect(tierOf(0.68 + 1e-9)).toBe(2);
+    expect(tierOf(0.85)).toBe(2);
+    expect(tierOf(0.85 + 1e-9)).toBe(3);
+    expect(tierOf(1)).toBe(3);
+    expect(tierOf(0.7, 0.75, 0.95)).toBe(1);
+    expect(tierOf(0.96, 0.75, 0.95)).toBe(3);
   });
 });
 
@@ -209,40 +207,92 @@ describe('rings (3.3.8.2)', () => {
   });
 });
 
-describe('tierGrid (3.3.10, 4.10.3)', () => {
-  it('is row-major with row 0 at the top and matches tierOf(surface) per cell', () => {
+describe('dashAt (12.14, Blueprint draw() glyph dashes)', () => {
+  const z = flowZ(12, 1);
+
+  it('sizes the stroke from v: half-length sp (0.15 + 0.5 v), width max(1, 0.08 sp), alpha 0.16 + 0.84 v', () => {
+    expect(BLUEPRINT_DASH).toEqual({ lenMin: 0.15, lenK: 0.5, widthK: 0.08, alphaMin: 0.16, flowAmp: 0.9, flowScalePx: 171.43, angleScalePx: 200 });
+    const s = dashAt(3, 4, 14, 0.5, z, 1);
+    expect(s.halfLen).toBeCloseTo(5.6, 12);
+    expect(s.halfWidth).toBeCloseTo(0.56, 12);
+    expect(s.alpha).toBeCloseTo(0.58, 12);
+    expect(dashAt(3, 4, 10, 0.5, z, 1).halfWidth).toBe(0.5); // 0.8 px floors at 1 px
+    expect(dashAt(3, 4, 10, 1, z, 1).alpha).toBe(1);
+    expect(dashAt(3, 4, 10, 0, z, 1).halfLen).toBeCloseTo(1.5, 12);
+  });
+
+  it('drifts the lattice point by at most 0.45 sp x intensity on each axis, and not at all once the text has formed', () => {
+    const r = mulberry32(9);
+    for (let k = 0; k < 300; k++) {
+      const i = Math.floor(r() * 100);
+      const j = Math.floor(r() * 60);
+      const sp = 5 + r() * 35;
+      const I = 0.5 + r() * 1.5;
+      const s = dashAt(i, j, sp, r(), z, I);
+      expect(Math.abs(s.x - (i + 0.5) * sp)).toBeLessThanOrEqual(0.45 * sp * I);
+      expect(Math.abs(s.y - (j + 0.5) * sp)).toBeLessThanOrEqual(0.45 * sp * I);
+      const still = dashAt(i, j, sp, 0.5, z, I, 1);
+      expect(still.x).toBe((i + 0.5) * sp);
+      expect(still.y).toBe((j + 0.5) * sp);
+    }
+  });
+
+  it('uses the Blueprint noise offsets (11, 0) / (0, 37) at x / 171.43 and the angle noise at x / 200', () => {
+    const sp = 14.83776;
+    const s = dashAt(7, 5, sp, 0.3, z, 1.7);
+    const hx = 7.5 * sp;
+    const hy = 5.5 * sp;
+    const qx = hx / 171.43 + NOISE_OFFSET;
+    const qy = hy / 171.43 + NOISE_OFFSET;
+    const amp = sp * 0.9 * 1.7;
+    expect(s.x).toBe(hx + (noise3(qx + 11, qy, z[6]) - 0.5) * amp);
+    expect(s.y).toBe(hy + (noise3(qx, qy + 37, z[7]) - 0.5) * amp);
+    expect(s.angle).toBe(noise3(hx / 200 + NOISE_OFFSET, hy / 200 + NOISE_OFFSET, z[8]) * 2 * Math.PI);
+    expect(s.angle).toBeGreaterThanOrEqual(0);
+    expect(s.angle).toBeLessThan(2 * Math.PI);
+  });
+});
+
+describe('dashGrid (12.14, 4.10.3)', () => {
+  const tierCounts = (g: Float32Array): number[] => {
+    const c = [0, 0, 0, 0];
+    for (let o = 6; o < g.length; o += DASH_STRIDE) c[g[o]] += 1;
+    return c;
+  };
+
+  it('is row-major with row 0 at the top, DASH_STRIDE floats per stroke, matching dashAt(surface) per cell', () => {
     const cols = 7;
     const rows = 4;
-    const g = tierGrid(cols, rows, 6, 12, 1);
+    const sp = 6;
+    const g = dashGrid(cols, rows, sp, 12, 1.7);
+    expect(DASH_STRIDE).toBe(7);
+    expect(g).toHaveLength(cols * rows * DASH_STRIDE);
     const z = flowZ(12, 1);
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
-        expect(g[j * cols + i]).toBe(tierOf(surface((i + 0.5) * 6, (j + 0.5) * 6, z), i, j));
+        const v = Math.min(1, surface((i + 0.5) * sp, (j + 0.5) * sp, z));
+        const s = dashAt(i, j, sp, v, z, 1.7);
+        const o = (j * cols + i) * DASH_STRIDE;
+        expect([...g.subarray(o, o + DASH_STRIDE)]).toEqual([s.x, s.y, s.angle, s.halfLen, s.halfWidth, s.alpha, tierOf(v)].map(Math.fround));
       }
     }
   });
 
-  it('is deterministic: golden FNV-1a checksum of the 200 x 105 OG grid (cell 6) at t = 12', () => {
-    const a = tierGrid(200, 105, 6, 12, 1);
-    expect(a).toEqual(tierGrid(200, 105, 6, 12, 1));
-    expect(a).toHaveLength(21_000);
-    expect(fnv1a(a)).toBe(0xa3198d09);
+  it('is deterministic and the OG lattice (109 x 58 at sp 11.04, t = 12) has strokes in every tier', () => {
+    const a = dashGrid(109, 58, 11.04, 12, 1.7);
+    expect(a).toEqual(dashGrid(109, 58, 11.04, 12, 1.7));
+    expect(a).toHaveLength(109 * 58 * DASH_STRIDE);
+    const [, f1, f2, f3] = tierCounts(a);
+    expect(f1).toBeGreaterThan(f2);
+    expect(f2).toBeGreaterThan(f3);
+    expect(f3).toBeGreaterThan(0);
+    expect(f1 + f2 + f3).toBe(109 * 58);
   });
 
-  it('covers 1440 x 900 at cell 5 (288 x 180), t = 12, inside the 3.3.10 bands', () => {
-    const [off, f1, f2, f3] = coverage(tierGrid(288, 180, 5, 12, 1));
-    expect(off).toBeGreaterThanOrEqual(50);
-    expect(off).toBeLessThanOrEqual(70);
-    expect(f1).toBeGreaterThanOrEqual(20);
-    expect(f1).toBeLessThanOrEqual(35);
-    expect(f2).toBeGreaterThanOrEqual(2);
-    expect(f2).toBeLessThanOrEqual(20);
-    expect(f3).toBe(0);
-  });
-
-  it('shows field-3 only with a ring', () => {
-    const ring: Ring = { x: 720, y: 450, radius: 162, amp: 0.975, sigma: 48, gain: 0.9 };
-    expect(coverage(tierGrid(288, 180, 5, 12, 1, [ring]))[3]).toBeGreaterThan(0);
+  it('raises more strokes to field-3 along a ring', () => {
+    const ring: Ring = { x: 600, y: 315, radius: 162, amp: 0.975, sigma: 48, gain: 0.9 };
+    const base = tierCounts(dashGrid(109, 58, 11.04, 12, 1.7))[3];
+    expect(tierCounts(dashGrid(109, 58, 11.04, 12, 1.7, [ring]))[3]).toBeGreaterThan(base);
   });
 });
 
@@ -255,13 +305,13 @@ describe('surface.ts stays importable by Node type stripping (4.10.2)', () => {
     expect(src).not.toMatch(/\benum\s|\bnamespace\s/);
   });
 
-  it('loads in plain Node and builds a 4 x 2 grid', () => {
+  it('loads in plain Node and builds a 4 x 2 lattice', () => {
     const run = spawnSync(
       process.execPath,
-      ['-e', "import('./src/field/surface.ts').then(m => console.log(m.tierGrid(4, 2, 6, 12, 1).length))"],
+      ['-e', "import('./src/field/surface.ts').then(m => console.log(m.dashGrid(4, 2, 6, 12, 1).length))"],
       { encoding: 'utf8' },
     );
     expect(run.status).toBe(0);
-    expect(run.stdout.trim()).toBe('8');
+    expect(run.stdout.trim()).toBe('56');
   });
 });

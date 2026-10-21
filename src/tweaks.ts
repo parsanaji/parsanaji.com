@@ -76,11 +76,17 @@ function mount(params: FieldParams, baseline: FieldParams, app: App): GUI {
     app.applyParams();
   };
 
-  const cells = gui.addFolder('cells');
-  cells.add(params, 'density', ['sparse', 'medium', 'dense']).onChange(live);
-  cells.add(params.cell, 'k', 0.001, 0.008, 0.0001).onChange(live);
-  cells.add(params.cell, 'minCss', 1, 6, 0.5).onChange(live);
-  cells.add(params.cell, 'maxCss', 2, 12, 0.5).onChange(live);
+  const dashes = gui.addFolder('dashes');
+  dashes.add(params, 'density', ['sparse', 'medium', 'dense']).onChange(live);
+  dashes.add(params.dash, 'minCss', 3, 20, 0.5).onChange(live);
+  dashes.add(params.dash, 'maxCss', 10, 60, 1).onChange(live);
+  dashes.add(params.dash, 'lenMin', 0, 0.5, 0.01).onChange(live);
+  dashes.add(params.dash, 'lenK', 0, 1.5, 0.01).onChange(live);
+  dashes.add(params.dash, 'widthK', 0.02, 0.3, 0.005).onChange(live);
+  dashes.add(params.dash, 'alphaMin', 0, 1, 0.01).onChange(live);
+  dashes.add(params.dash, 'flowAmp', 0, 2.5, 0.05).onChange(live);
+  dashes.add(params.dash, 'repelK', 0, 6, 0.1).onChange(live);
+  dashes.add(params.dash, 'color', ['core', 'muted']).onChange(live);
 
   const surface = gui.addFolder('surface');
   surface.add(params, 'intensity', ['subtle', 'medium', 'lively']).onChange(live);
@@ -90,6 +96,7 @@ function mount(params: FieldParams, baseline: FieldParams, app: App): GUI {
   surface.add(params.shape, 'warpAmp', 0, 6, 0.1).onChange(live);
   surface.add(params.shape, 'level', 0, 0.6, 0.01).onChange(live);
   surface.add(params.shape, 'gain', 0.5, 4, 0.05).onChange(live);
+  surface.add(params.shape, 'shapeK', 0, 1, 0.05).onChange(live);
 
   const tiers = gui.addFolder('tiers');
   const keepOrder = (): void => {
