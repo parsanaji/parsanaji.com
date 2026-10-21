@@ -114,14 +114,9 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
 <g fill="${TEXT2_HEX}">${tag.map((t) => t.svg).join('')}${domain.svg}</g>
 </svg>`;
 await sharp(band).composite([{ input: Buffer.from(svg) }]).png({ compressionLevel: 9 }).toFile('public/og.png');
-
-// 3. Favicon PNGs: the dark variant of public/favicon.svg with the dark fills written directly,
-//    because librsvg ignores the media query (4.10.6, 3.2.7).
-const faviconSvg = await readFile('public/favicon.svg', 'utf8');
-const darkSvg = Buffer.from(
-  faviconSvg.replace(/<style>[\s\S]*?<\/style>/, '<style>.edge{fill:#3b5df0}.tile{fill:#050a22}.glyph{fill:#e8eeff}</style>'),
-);
-const icon = (size) => sharp(darkSvg, { density: (72 * size) / 16 }).resize(size, size);
+// 3. Favicon PNGs: public/favicon.svg (one look, no media query) rasterised from its 32-unit viewBox (4.10.6, 3.2.7).
+const faviconSvg = Buffer.from(await readFile('public/favicon.svg', 'utf8'));
+const icon = (size) => sharp(faviconSvg, { density: (72 * size) / 32 }).resize(size, size);
 await icon(32).png().toFile('public/favicon-32.png');
 await icon(192).png().toFile('public/favicon-192.png');
 await icon(180).flatten({ background: BG }).png().toFile('public/apple-touch-icon.png');

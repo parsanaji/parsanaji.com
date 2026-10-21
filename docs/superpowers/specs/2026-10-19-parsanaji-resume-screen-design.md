@@ -285,7 +285,7 @@ The page has two decision moments: stay or bounce in the first three seconds, th
 
   - **3.2.5.1** Placement rule: `--accent-2` measures 4.06–4.51 over a bright cell at the 0.86 stop, so the status line and the links row stay in the solid scrim zone (3.1.10.2). This is a placement rule, not a colour change.
 - **3.2.6 Theme crossfade (R7).** Switching looks crossfades the CSS colour tokens and the field colour uniforms together over 300 ms, linear, in gamma-encoded sRGB (4.6.4–4.6.6). The field's colour tween starts on the frame after the toggle, so it matches the CSS transition; a press inside a running crossfade behaves like an interrupted CSS transition, starting a new 300 ms tween from the colours on screen at that frame, never from the previous target (12.4).
-- **3.2.7 Favicon colours.** The SVG favicon mirrors the browser's scheme with its own `prefers-color-scheme` style (ledger ruling): light default edge `#3b5df0`, tile `#f2f6fe`, glyph `#071348`; dark tile `#050a22`, glyph `#e8eeff`, same edge. The PNG fallbacks use the dark variant (4.10.6).
+- **3.2.7 Favicon colours.** One look for both schemes (ruling 2026-10-21, replacing the scheme-mirroring monogram): navy tile `#050a22` (rx 7 of 32), paper `#e8eeff` glyph, one `#3b5df0` dash. A navy tile stays legible on light and dark tab bars, so no `prefers-color-scheme` style is needed; the PNG fallbacks are the same picture (4.10.6).
 - **3.2.8 OG colours.** Background `#050a22`; field tiers `#3b5df0`, `#8db0ff`, `#e8eeff`; name `#e8eeff`; tagline and domain `#7993da` (Appendix B §5.2).
 - **3.2.9 `theme-color` and `color-scheme`.** `<meta name="color-scheme" content="light dark">`; `<meta name="theme-color" content="#f2f6fe" media="(prefers-color-scheme: light)">`; `<meta name="theme-color" content="#050a22" media="(prefers-color-scheme: dark)">`. When the toggle forces a look, the theme module sets both metas' `content` to the computed `--theme-color`; returning to "system" restores the two original values (Appendix B §5.3).
 
@@ -982,19 +982,8 @@ export const DEFAULT_FIELD: FieldParams = {
   - `I build AI agents, apps, and the systems behind them.`, Regular, 32 px, `#7993da`, x 76, wrapped greedily at 560 px of advance width on word boundaries: line 1 `I build AI agents, apps, and` at baseline 360, line 2 `the systems behind them.` at baseline 402;
   - `parsanaji.com`, Regular, 26 px, `#7993da`, x 76, baseline 560.
   - Compose: `sharp(bandPng).composite([{ input: Buffer.from(svg) }]).png({ compressionLevel: 9 }).toFile('public/og.png')` (about 78 KB).
-- **4.10.6 Favicon PNGs.** The same script renders the dark variant of the favicon SVG (4.10.7 with the dark fills written directly, no media query, because librsvg ignores it) with `sharp(svgBuffer, { density: 72 × size / 16 }).resize(size, size).png()` to `public/favicon-32.png` (32×32) and `public/favicon-192.png` (192×192), and with an added `.flatten({ background: '#050a22' })` to `public/apple-touch-icon.png` (180×180, no alpha channel).
-- **4.10.7 `public/favicon.svg`.** Exactly Agent B's monogram (Appendix B §5.1, full glyph rects from the scratch file), byte for byte:
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
-<style>.edge{fill:#3b5df0}.tile{fill:#f2f6fe}.glyph{fill:#071348}@media (prefers-color-scheme:dark){.edge{fill:#3b5df0}.tile{fill:#050a22}.glyph{fill:#e8eeff}}</style>
-<rect class="edge" width="16" height="16" rx="3"/>
-<rect class="tile" x="1" y="1" width="14" height="14" rx="2"/>
-<g class="glyph"><rect x="2" y="4" width="4" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="2" y="7" width="1" height="1"/><rect x="6" y="7" width="1" height="1"/><rect x="2" y="8" width="4" height="1"/><rect x="2" y="9" width="1" height="1"/><rect x="2" y="10" width="1" height="1"/><rect x="2" y="11" width="1" height="1"/><rect x="9" y="4" width="1" height="1"/><rect x="13" y="4" width="1" height="1"/><rect x="9" y="5" width="2" height="1"/><rect x="13" y="5" width="1" height="1"/><rect x="9" y="6" width="2" height="1"/><rect x="13" y="6" width="1" height="1"/><rect x="9" y="7" width="1" height="1"/><rect x="11" y="7" width="1" height="1"/><rect x="13" y="7" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="9" y="9" width="1" height="1"/><rect x="12" y="9" width="2" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="12" y="10" width="2" height="1"/><rect x="9" y="11" width="1" height="1"/><rect x="13" y="11" width="1" height="1"/></g>
-</svg>
-```
-
-  The SVG's internal style is not subject to the page CSP (image context).
+- **4.10.6 Favicon PNGs.** The same script rasterises `public/favicon.svg` as is (no style rewrite: the SVG has one look, 4.10.7) with `sharp(svgBuffer, { density: 72 × size / 32 }).resize(size, size).png()` to `public/favicon-32.png` (32×32) and `public/favicon-192.png` (192×192), and with an added `.flatten({ background: '#050a22' })` to `public/apple-touch-icon.png` (180×180, no alpha channel).
+- **4.10.7 `public/favicon.svg`.** The mono P and one dash (ruling 2026-10-21; the 16×16 PN pixel monogram of Appendix B §5.1 is retired): `viewBox="0 0 32 32"`; `<rect width="32" height="32" rx="7" fill="#050a22"/>`; the JetBrains Mono Bold `P` outline (harfbuzz `glyphToPath`, 23 px em, `upem` 1000, so `scale(0.023 -0.023)`) filled `#e8eeff` at `translate(6 23.5)`; and one round-capped dash `<line x1="19.5" y1="23" x2="25.5" y2="23" stroke="#3b5df0" stroke-width="4.2" stroke-linecap="round"/>` on the baseline: the name's typeface plus the field's unit. No `<style>`, no media query. Candidates and the contact sheets that picked it: the favicon lab in `.superpowers/favicon-lab/`.
 - **4.10.8 Guard.** `tests/ogAsset.test.ts` checks that `public/og.png` is a 1200×630 PNG under 300 KB, and that the three favicon PNGs exist as PNGs at 32×32, 192×192 and 180×180 (the apple icon without an alpha channel).
 
 ### 4.11 Fonts (R8)

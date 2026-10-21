@@ -375,7 +375,7 @@ Keep Frost as the fallback if Parsa says "whiter"; keep Cream only if he asks fo
 
 ## 5. Favicon, OG image, theme-color
 
-### 5.1 Favicon (PN monogram SVG)
+### 5.1 Favicon (PN monogram SVG) — retired 2026-10-21 by spec 4.10.7 (mono P and one dash); kept for the contrast numbers
 
 The sample is a 16×16 pixel grid with crisp edges: P and N as 5×8 dither-pixel glyphs inside a tile with a 1 px electric edge. It lives in the scratch dir as `favicon-pn.svg`, with a preview at 16/32/64 px on four browser-chrome colours in `favicon-preview.png`. All variants were legible at 16 px. The SVG carries its own `prefers-color-scheme` media query, which follows the browser chrome, not the site toggle.
 
