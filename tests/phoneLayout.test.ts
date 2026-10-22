@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 // 12.16 (Parsa, 2026-10-21): the phone layout is one screen. The field fills the viewport behind the content under
 // a flat scrim (the entry name forms at the screen's centre), rows flow inline, and the stack fits 100svh on every
-// current phone, with a two-step ladder for short viewports. Token values are pinned by tests/tokens.test.ts.
+// current phone. 12.17 (Parsa, 2026-10-22: "everything looks super squished … remove the projects"): the Projects
+// block is hidden on phones, the type and rhythm loosen, and the one ladder step trims Misc under 600 px tall.
+// Token values are pinned by tests/tokens.test.ts.
 const CSS = readFileSync('src/styles.css', 'utf8').replace(/\r\n/g, '\n');
 const HTML = readFileSync('index.html', 'utf8').replace(/\r\n/g, '\n');
 const BAND_ROOT_BLOCK = '@media (max-width: 719.98px), not all and (min-aspect-ratio: 1/1) {\n  :root {';
@@ -29,7 +31,7 @@ function clampAt(expr: string, unit: 'vw' | 'svh', len: number): number {
 const phoneStart = CSS.indexOf(BAND_ROOT_BLOCK);
 const phone = CSS.slice(phoneStart, CSS.indexOf('\n}\n', phoneStart) + 3);
 
-describe('phone layout (3.1.13 as amended by 12.16)', () => {
+describe('phone layout (3.1.13 as amended by 12.16 and 12.17)', () => {
   it('drops the bottom band: the field keeps its rail box and the scrim is a flat 80 % veil over the whole viewport', () => {
     expect(phoneStart).toBeGreaterThan(0);
     expect(phone).not.toContain('--band-h');
@@ -47,10 +49,11 @@ describe('phone layout (3.1.13 as amended by 12.16)', () => {
     expect(phone).not.toContain('var(--fade)');
   });
 
-  it('flows rows inline, sizes project rows to one line and pins the footer to the bottom edge', () => {
+  it('flows rows inline, hides the Projects block and pins the footer to the bottom edge', () => {
     expect(phone).toContain('.row { display: block; }');
     expect(phone).toContain('.when { margin-right: 0.9em; }');
-    expect(phone).toContain('.rows--compact .row { font-size: var(--fs-proj); }');
+    expect(phone).toContain('.rail > .block--proj { display: none; }');
+    expect(phone).not.toContain('--fs-proj'); // 12.17: no project rows on phones
     expect(phone).toContain('.rail > .links { margin-top: auto; padding-top: var(--gap-foot); }');
     expect(CSS).not.toContain('@media (max-width: 519.98px)'); // 3.1.14 retired
   });
@@ -66,13 +69,14 @@ describe('phone layout (3.1.13 as amended by 12.16)', () => {
     }
   });
 
-  it('trims Misc to three tags under 720 px tall and Projects to two rows under 600 px', () => {
-    expect(CSS).toContain('@media (max-width: 719.98px) and (max-height: 719.98px) {\n  .tags li:nth-child(n+4) {');
-    expect(CSS).toContain('@media (max-width: 719.98px) and (max-height: 599.98px) {\n  .block--proj .row:nth-child(n+3) {');
+  it('trims Misc to three tags under 600 px tall and has no other phone ladder step', () => {
+    expect(CSS).toContain('@media (max-width: 719.98px) and (max-height: 599.98px) {\n  .tags li:nth-child(n+4) {');
+    expect(CSS).not.toContain('@media (max-width: 719.98px) and (max-height: 719.98px)');
+    expect(CSS.match(/@media \(max-width: 719\.98px\) and \(max-height/g)).toHaveLength(1);
   });
 });
 
-describe('phone stack fits one screen (12.16)', () => {
+describe('phone stack fits one screen (12.16, 12.17)', () => {
   const strip = (s: string): string =>
     s.replace(/<span class="sr-only">[^<]*<\/span>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
   const section = (cls: string): string => {
@@ -138,10 +142,9 @@ describe('phone stack fits one screen (12.16)', () => {
     const eyebrow = px('--fs-eyebrow') * 1.2 + Number.parseFloat(root['--gap-eyebrow']);
     const rowPad = vh('--row-pad');
     const gapBlock = vh('--gap-block');
-    const misc = h <= 719.98 ? tags.slice(0, 3) : tags;
-    const proj = h <= 599.98 ? rows('proj').slice(0, 2) : rows('proj');
-    const row = (r: { when: string; what: string }, fs: number, pad: number): number =>
-      wrapLines([{ text: r.when, fs: fsWhen, after: r.when ? 0.9 * fs : 0 }, { text: r.what, fs }], avail) * fs * 1.45 + 2 * pad;
+    const misc = h <= 599.98 ? tags.slice(0, 3) : tags;
+    const row = (r: { when: string; what: string }): number =>
+      wrapLines([{ text: r.when, fs: fsWhen, after: r.when ? 0.9 * fsBody : 0 }, { text: r.what, fs: fsBody }], avail) * fsBody * 1.45 + 2 * rowPad;
     const exp = rows('exp');
     const tl = tagLines(misc, fsMisc, avail);
     const parts = [
@@ -149,9 +152,9 @@ describe('phone stack fits one screen (12.16)', () => {
       px('--fs-name'),
       vh('--gap-tag') + wrapLines([{ text: tagline, fs: px('--fs-tag') }], avail) * px('--fs-tag') * 1.4,
       vh('--gap-tag') + fsMeta * 1.4, // status
-      gapBlock + eyebrow + exp.reduce((s, r) => s + row(r, fsBody, rowPad), 0) + (exp.length - 1), // hairlines
-      gapBlock + eyebrow + proj.reduce((s, r) => s + row(r, px('--fs-proj'), rowPad * 0.6), 0),
-      gapBlock + eyebrow + rows('edu').reduce((s, r) => s + row(r, fsBody, rowPad), 0),
+      gapBlock + eyebrow + exp.reduce((s, r) => s + row(r), 0) + (exp.length - 1), // hairlines
+      // Projects: hidden on phones (12.17)
+      gapBlock + eyebrow + rows('edu').reduce((s, r) => s + row(r), 0),
       gapBlock + eyebrow + tl * fsMisc * 1.5 + (tl - 1) * 0.15 * fsMisc,
       vh('--gap-foot') + px('--fs-link') * 1.45,
       vh('--gap-meta') + fsMeta * 1.4,
@@ -163,9 +166,7 @@ describe('phone stack fits one screen (12.16)', () => {
   it('reads the content it measures', () => {
     expect(tags).toHaveLength(7);
     expect(rows('exp')).toHaveLength(3);
-    expect(rows('proj')).toHaveLength(4);
     expect(rows('exp')[0]).toEqual({ when: '2025 —', what: 'Software Developer · Koreex Systems' });
-    expect(rows('proj')[0].what).toBe('parsanaji.com · This site. WebGL2 dash field.');
   });
 
   // visible viewports with the browser chrome shown: iPhone SE / 14 / 15 Pro / 15 Pro Max in Safari, Galaxy S and
@@ -184,11 +185,8 @@ describe('phone stack fits one screen (12.16)', () => {
     expect(stackHeight(w, h)).toBeLessThanOrEqual(h - 12);
   });
 
-  it('keeps every project row on one line from 360 px up', () => {
-    for (const w of [360, 375, 390, 412, 430]) {
-      const avail = w - 2 * clampAt(root['--gutter'], 'vw', w);
-      const fs = clampAt(root['--fs-proj'], 'vw', w);
-      for (const r of rows('proj')) expect(wrapLines([{ text: r.what, fs }], avail), `${r.what} at ${w}`).toBe(1);
-    }
+  it('shows all seven tags from 600 px tall and keeps them to four lines at 390 px wide', () => {
+    const avail = 390 - 2 * clampAt(root['--gutter'], 'vw', 390);
+    expect(tagLines(tags, clampAt(root['--fs-misc'], 'vw', 390), avail)).toBeLessThanOrEqual(4);
   });
 });

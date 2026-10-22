@@ -193,3 +193,14 @@ describe('index.html head and CSP rules (5.2, 4.6.1, 4.6.2)', () => {
     expect(all(/<link rel="icon" href="([^"]+)"/g, head)).toEqual(['/favicon-32.png', '/favicon-192.png', '/favicon.svg']);
   });
 });
+
+// 12.17 (Parsa, 2026-10-22): "Koreex Systems" in the Experience row links to the Koreex site in both layouts.
+describe('Koreex link (3.1.4 item 5, 12.17)', () => {
+  it('wraps the Koreex Systems org in an anchor to https://koreex.com/ that opens a new tab', () => {
+    const html = readFileSync('index.html', 'utf8').replace(/\r\n/g, '\n');
+    expect(html).toContain(
+      '<span class="what">Software Developer <span class="sub"><a class="org" href="https://koreex.com/" target="_blank" rel="noopener">Koreex Systems</a></span></span>',
+    );
+    expect(html.match(/class="org"/g)).toHaveLength(1);
+  });
+});
