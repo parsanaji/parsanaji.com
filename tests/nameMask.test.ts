@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldParams } from '../src/field/params';
-import { MASK_FONT_FAMILY, alphaPlane, fitFontPx, maskBoxFor, rasterizeMask, type MaskGrid, type MaskPlane } from '../src/field/nameMask';
+import { MASK_FONT_FAMILY, alphaPlane, entryText, fitFontPx, maskBoxFor, rasterizeMask, type MaskGrid, type MaskPlane } from '../src/field/nameMask';
 import { computeGrid } from '../src/field/sizing';
 import { createFakeCanvasFactory } from './helpers/fakeCanvas';
 
@@ -86,7 +86,7 @@ describe('rasterizeMask (spec 4.8.2-4.8.4)', () => {
     expect(contexts[0].fillTextCalls[0].y).toBeCloseTo(180 + (0.73 * 80.64) / 2, 6);
   });
 
-  it('scales the name to the 390 x 236.32 phone band: 54.6 px, centred (3.4.6)', () => {
+  it('scales a one-line name to a 390 x 236.32 box: 54.6 px, centred (4.8.3)', () => {
     const g = computeGrid(390, 236.32, 3, 2);
     const { factory } = createFakeCanvasFactory();
     const box = maskBoxFor('entry', { w: 390, h: 236.32 }, null, true);
@@ -128,5 +128,44 @@ describe('maskBoxFor (spec 3.4.6, 3.4.11)', () => {
 
   it('clamps a scrim edge past the field to an empty box', () => {
     expect(maskBoxFor('konami', { w: 760, h: 700 }, 762, false)).toEqual({ x: 760, y: 0, w: 0, h: 700 });
+  });
+});
+
+// 12.16: on a portrait box (the phone layout's whole-viewport field) the name stacks into two lines, so it forms
+// at the screen's centre at about twice the size one line would allow.
+describe('stacked name on portrait boxes (3.4.6 as amended by 12.16)', () => {
+  const PHONE = { x: 0, y: 0, w: 390, h: 664 };
+
+  it('entryText stacks "Parsa Naji" into two lines when the box is taller than wide, and only then', () => {
+    expect(entryText('Parsa Naji', PHONE)).toBe('Parsa\nNaji');
+    expect(entryText('Parsa Naji', { x: 0, y: 0, w: 1440, h: 900 })).toBe('Parsa Naji');
+    expect(entryText('Parsa Naji', { x: 0, y: 0, w: 700, h: 700 })).toBe('Parsa Naji');
+    expect(entryText('nice.', PHONE)).toBe('nice.'); // one word stays one line
+  });
+
+  it('fitFontPx fits n lines at a 1.1 em advance into the height rule', () => {
+    expect(fitFontPx(300, { x: 0, y: 0, w: 2000, h: 300 }, 0.4, 0.84, 2)).toBeCloseTo(120 / 2.1, 9);
+    expect(fitFontPx(300, { x: 0, y: 0, w: 2000, h: 300 }, 0.4, 0.84, 1)).toBeCloseTo(120, 9);
+  });
+
+  it('draws two centred lines at 109.2 px in the 390 x 664 phone field (width-limited by "Parsa" = 3.0 em)', () => {
+    const g = computeGrid(390, 664, 3, 6.27);
+    const { factory, contexts } = createFakeCanvasFactory();
+    const plane = rasterizeMask('Parsa\nNaji', PHONE, { cols: g.cols, rows: g.rows, cellCss: g.cellCss, supersample: 2 }, FONT, MASK, factory);
+    expect(plane.fontPx).toBeCloseTo(109.2, 9);
+    const s = 2 / g.cellCss;
+    const size = 109.2 * s;
+    const calls = contexts[0].fillTextCalls;
+    expect(calls.map((c) => c.text)).toEqual(['Parsa', 'Naji']);
+    // the block: ascent 0.7 size (fake) + one 1.1 size advance + descent 0, centred on the box centre
+    const blockH = 0.7 * size + 1.1 * size;
+    const cy = 332 * s;
+    expect(calls[0].x).toBeCloseTo(195 * s, 9);
+    expect(calls[1].x).toBeCloseTo(195 * s, 9);
+    expect(calls[0].y).toBeCloseTo(cy - blockH / 2 + 0.7 * size, 6);
+    expect(calls[1].y).toBeCloseTo(cy - blockH / 2 + 0.7 * size + 1.1 * size, 6);
+    const c = inkCentre(plane);
+    expect(Math.abs(c.x - 195 * s)).toBeLessThanOrEqual(1);
+    expect(Math.abs(c.y - cy)).toBeLessThanOrEqual(1);
   });
 });

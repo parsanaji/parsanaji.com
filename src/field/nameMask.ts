@@ -34,11 +34,26 @@ export interface MaskPlane { data: Uint8Array; width: number; height: number; fo
 /** JetBrains Mono's cap height: the ascent used when measureText has no actualBoundingBox* (4.8.4, 11.31). */
 const FALLBACK_ASCENT_EM = 0.73;
 
-/** Spec 4.8.3: min(heightFrac × box.h, widthFrac × box.w × 100 / widthAt100), never negative. */
-export function fitFontPx(widthAt100: number, box: MaskBox, heightFrac: number, widthFrac: number): number {
-  const byHeight = heightFrac * Math.max(0, box.h);
+/** 12.16: the baseline-to-baseline advance of a stacked name, in em. */
+export const LINE_ADVANCE_EM = 1.1;
+
+/**
+ * Spec 4.8.3: min(heightFrac × box.h, widthFrac × box.w × 100 / widthAt100), never negative. With `lines` > 1 the
+ * height rule fits the whole block, 1 + (lines − 1) × 1.1 em tall (12.16); `widthAt100` is the longest line's.
+ */
+export function fitFontPx(widthAt100: number, box: MaskBox, heightFrac: number, widthFrac: number, lines = 1): number {
+  const byHeight = (heightFrac * Math.max(0, box.h)) / (1 + (lines - 1) * LINE_ADVANCE_EM);
   if (!(widthAt100 > 0)) return byHeight;
   return Math.min(byHeight, (widthFrac * Math.max(0, box.w) * 100) / widthAt100);
+}
+
+/**
+ * 3.4.6 as amended by 12.16: on a portrait box (the phone layout's whole-viewport field) a two-word name stacks
+ * into two lines at its first space, so it forms at the screen's centre at about twice the one-line size.
+ */
+export function entryText(name: string, box: MaskBox): string {
+  const i = name.indexOf(' ');
+  return i > 0 && box.h > box.w ? `${name.slice(0, i)}\n${name.slice(i + 1)}` : name;
 }
 
 /** Spec 4.8.5: byte 3 (alpha) of every RGBA pixel, as the R8 plane. */
@@ -68,20 +83,25 @@ export function rasterizeMask(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2d context unavailable');
   const s = grid.supersample / grid.cellCss; // texels per CSS px
+  const lines = text.split('\n'); // 12.16: a stacked name is two lines, centred as one block
   ctx.clearRect(0, 0, width, height);
   ctx.font = `${font.weight} 100px ${font.family}`;
-  const fontPx = fitFontPx(ctx.measureText(text).width, box, p.heightFrac, p.widthFrac);
+  const widthAt100 = Math.max(...lines.map((line) => ctx.measureText(line).width));
+  const fontPx = fitFontPx(widthAt100, box, p.heightFrac, p.widthFrac, lines.length);
   const size = fontPx * s;
   ctx.font = `${font.weight} ${size}px ${font.family}`;
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  const m = ctx.measureText(text);
-  const ascent = typeof m.actualBoundingBoxAscent === 'number' ? m.actualBoundingBoxAscent : FALLBACK_ASCENT_EM * size;
-  const descent = typeof m.actualBoundingBoxDescent === 'number' ? m.actualBoundingBoxDescent : 0;
+  const first = ctx.measureText(lines[0]);
+  const last = ctx.measureText(lines[lines.length - 1]);
+  const ascent = typeof first.actualBoundingBoxAscent === 'number' ? first.actualBoundingBoxAscent : FALLBACK_ASCENT_EM * size;
+  const descent = typeof last.actualBoundingBoxDescent === 'number' ? last.actualBoundingBoxDescent : 0;
+  const advance = LINE_ADVANCE_EM * size;
+  const blockH = ascent + descent + (lines.length - 1) * advance;
   const cx = (box.x + box.w / 2) * s;
-  const cy = (box.y + box.h / 2) * s;
-  if (size > 0) ctx.fillText(text, cx, cy + (ascent - descent) / 2);
+  const baseline = (box.y + box.h / 2) * s - blockH / 2 + ascent; // one line: cy + (ascent − descent) / 2
+  if (size > 0) lines.forEach((line, i) => ctx.fillText(line, cx, baseline + i * advance));
   return { data: alphaPlane(ctx.getImageData(0, 0, width, height)), width, height, fontPx };
 }
 

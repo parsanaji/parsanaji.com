@@ -4,7 +4,7 @@ import { FpsProbe } from './core/quality';
 import { konamiMaskBox } from './eggs/konami';
 import { EntryMachine, type EntryEvent, type EntryTimings } from './field/entry';
 import { breathScale, effectiveIntensity } from './field/flow';
-import { MASK_FONT_FAMILY, maskBoxFor, rasterizeMask, type Canvas2DLike, type MaskBox } from './field/nameMask';
+import { MASK_FONT_FAMILY, entryText, maskBoxFor, rasterizeMask, type Canvas2DLike, type MaskBox } from './field/nameMask';
 import type { FieldParams } from './field/params';
 import { PointerModel, type PointerKind } from './field/pointer';
 import { FieldRenderer, type FrameInputs } from './field/renderer';
@@ -553,7 +553,7 @@ export class App implements LifecycleTarget {
     if (!box) return false; // 3.4.11: the scrim leaves no clear field, so there is nowhere to write "nice."
     try {
       const plane = rasterizeMask(
-        kind === 'konami' ? CONTENT.konamiText : CONTENT.name, // 3.4.6, 3.4.11
+        kind === 'konami' ? CONTENT.konamiText : entryText(CONTENT.name, box), // 3.4.6 (12.16: stacked on portrait), 3.4.11
         box,
         { cols: grid.cols, rows: grid.rows, cellCss: grid.cellCss, supersample: this.params.mask.supersample },
         { family: MASK_FONT_FAMILY, weight: this.params.mask.fontWeight },
