@@ -43,6 +43,11 @@ describe('phone layout (3.1.13 as amended by 12.16 and 12.17)', () => {
     expect(CSS).not.toContain('html.no-webgl .rail');
   });
 
+  it('overdraws the field and the veil 160 px past the viewport top and bottom, so the Safari bars show dashes (12.18)', () => {
+    expect(phone).toContain('.field,\n  .scrim {\n    top: calc(-160px - env(safe-area-inset-top, 0px));\n    height: calc(100% + 320px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));\n  }');
+    expect(phone.indexOf('.field,\n  .scrim {')).toBeGreaterThan(phone.indexOf('.scrim {\n    inset: 0;'));
+  });
+
   it('sizes the rail to the small viewport with safe-area padding and no band padding', () => {
     expect(phone).toContain('min-height: 100vh;\n    min-height: 100svh;');
     expect(phone).toContain('calc(var(--pad-y) + env(safe-area-inset-bottom, 0px))');

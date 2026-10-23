@@ -669,6 +669,13 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
     background: var(--scrim-mid);
     background: color-mix(in srgb, var(--scrim-solid) 80%, transparent);
   }
+  /* 12.18: the canvas and the veil overdraw 160 px past the viewport top and bottom (plus the safe-area insets), so
+     Safari's translucent bars and the URL-bar collapse show the field, not the bare background */
+  .field,
+  .scrim {
+    top: calc(-160px - env(safe-area-inset-top, 0px));
+    height: calc(100% + 320px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  }
 
   .theme-toggle {
     position: absolute;
