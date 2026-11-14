@@ -2,6 +2,14 @@
   "name": "parsanaji.com",
   "private": true,
   "version": "0.1.0",
+  "description": "Personal site of Parsa Naji: a one-screen résumé over a WebGL2 field of flowing dashes.",
+  "homepage": "https://parsanaji.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/parsanaji/parsanaji.com.git"
+  },
+  "author": "Parsa Naji",
+  "license": "UNLICENSED",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"
