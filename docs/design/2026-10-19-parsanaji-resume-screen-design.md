@@ -10,16 +10,16 @@
 2. The controller rulings R1–R16 (`design-brief.md` §1) and every "Ruling" line of the ledger (`progress.md`, same folder).
 3. This spec. It resolves every contradiction between the reports with the rulings; section 11 lists the choices this spec made where no ruling decided.
 4. The appendices, which are the three pre-spec reports copied verbatim and never edited:
-   - Appendix A: `docs/superpowers/specs/2026-10-19-parsanaji-resume-screen-appendix/A-architecture.md` (engine audit, module map, GLSL, sizing, entry machine, lifecycle, OG image, bundle, tests, risks).
-   - Appendix B: `docs/superpowers/specs/2026-10-19-parsanaji-resume-screen-appendix/B-palette.md` (tokens, contrast tables, favicon, OG and theme-color colours).
-   - Appendix C: `docs/superpowers/specs/2026-10-19-parsanaji-resume-screen-appendix/C-layout.md` (markup, stylesheet, measured content budget, accessibility, head block).
+   - Appendix A: `docs/design/2026-10-19-parsanaji-resume-screen-appendix/A-architecture.md` (engine audit, module map, GLSL, sizing, entry machine, lifecycle, OG image, bundle, tests, risks).
+   - Appendix B: `docs/design/2026-10-19-parsanaji-resume-screen-appendix/B-palette.md` (tokens, contrast tables, favicon, OG and theme-color colours).
+   - Appendix C: `docs/design/2026-10-19-parsanaji-resume-screen-appendix/C-layout.md` (markup, stylesheet, measured content budget, accessibility, head block).
 
 **How to read it:**
 - Every requirement has a number. Plain present tense ("the toggle shows") is as binding as "must".
 - "Appendix A §3.5" means section 3.5 of the architecture report.
 - When a requirement says "exactly as Appendix X §n, with these changes", the appendix code is normative and the listed changes are the only differences.
 - Where this spec and an appendix disagree, this spec wins. Appendix text that this spec does not mention and that no ruling overrides stays normative.
-- The teaser spec `docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md` is superseded, except for the rules this spec marks "house rule kept".
+- The teaser spec `docs/design/2026-10-16-parsanaji-teaser-design.md` is superseded, except for the rules this spec marks "house rule kept".
 
 ---
 

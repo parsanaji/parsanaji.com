@@ -260,7 +260,7 @@ C:\Users\parsa\parsanaji.com\
 │   └── vite-env.d.ts
 ├── tests/                        vitest: clock, env, prng, easing, time, quality, sampler (+ helpers/fakeCanvas.ts), motion, pointer, morph, fonts
 ├── docs/OPERATOR.md              Parsa's one-time steps (7.6) and how to verify them
-├── docs/superpowers/specs/2026-10-16-parsanaji-teaser-design.md
+├── docs/design/2026-10-16-parsanaji-teaser-design.md
 ├── docs/superpowers/plans/2026-10-16-parsanaji-teaser.md
 ├── README.md                     run / test / deploy recipes
 ├── package.json, package-lock.json, tsconfig.json, vite.config.ts, vitest.config.ts
