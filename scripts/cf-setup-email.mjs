@@ -1,8 +1,13 @@
-// Email Routing: info@parsanaji.com -> private-inbox@example.com. Run: node scripts/cf-setup-email.mjs [--no-wait]
+// Email Routing: info@parsanaji.com -> the private inbox in EMAIL_ROUTING_DEST (.env).
+// Run: node scripts/cf-setup-email.mjs [--no-wait]
 import { api, env, requireEnv, sleep } from './cf-api.mjs';
 
 requireEnv('token', 'accountId', 'zoneId');
-const DEST = 'private-inbox@example.com';
+const DEST = process.env.EMAIL_ROUTING_DEST ?? '';
+if (!DEST) {
+  console.error('missing EMAIL_ROUTING_DEST in .env (the inbox info@parsanaji.com forwards to)');
+  process.exit(1);
+}
 const ADDRESS = 'info@parsanaji.com';
 const noWait = process.argv.includes('--no-wait');
 
@@ -25,13 +30,13 @@ if (!dest) {
   console.log(`destination ${DEST}: ${dest.verified ? 'verified' : 'awaiting verification'}`);
 }
 
-// 3. wait for Parsa to click the link (operator step 3)
+// 3. wait for the verification click in the destination inbox
 while (!dest.verified) {
   if (noWait) {
-    console.log('destination not verified yet; rerun this script after Parsa clicks the link');
+    console.log('destination not verified yet; rerun this script after clicking the link');
     process.exit(0);
   }
-  console.log('waiting for the verification click in the iCloud inbox (checking every 15 s)...');
+  console.log('waiting for the verification click in the destination inbox (checking every 15 s)...');
   await sleep(15_000);
   dest = await api('GET', `/accounts/${env.accountId}/email/routing/addresses/${dest.id}`);
 }
