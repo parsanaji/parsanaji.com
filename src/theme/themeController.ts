@@ -42,7 +42,6 @@ export function initTheme(d: ThemeControllerDeps): { readonly theme: Theme; read
   const root = doc.documentElement;
   const metas = Array.from(doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'));
   const originalMeta = metas.map((m) => m.content); // #f2f6fe (light) and #050a22 (dark), restored for 'system'
-  const word = button?.querySelector<HTMLElement>('[data-theme-word]') ?? null;
 
   let pref: ThemePref = readPref(storage);
   let theme: Theme = resolveTheme(pref, systemDark.matches);
@@ -64,7 +63,7 @@ export function initTheme(d: ThemeControllerDeps): { readonly theme: Theme; read
   };
   const applyLabel = (): void => {
     const { word: target, label } = toggleLabel(theme);
-    if (word) word.textContent = target;
+    button?.setAttribute('data-to', target); // CSS shows the sun for 'light' and the moon for 'dark' (12.20)
     button?.setAttribute('aria-label', label);
   };
   const startAnim = (): void => {
@@ -73,7 +72,7 @@ export function initTheme(d: ThemeControllerDeps): { readonly theme: Theme; read
     animTimer = setTimeout(() => root.classList.remove('theme-anim'), ANIM_CLASS_MS);
   };
 
-  // 4.6.7 initial state: data-theme again (idempotent with theme-boot.js), metas when explicit, word and label, then show
+  // 4.6.7 initial state: data-theme again (idempotent with theme-boot.js), metas when explicit, icon and label, then show
   applyAttribute();
   if (pref !== 'system') applyMetas();
   applyLabel();

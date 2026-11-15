@@ -142,14 +142,14 @@ function fakeEnv(opts: { stored?: string; osDark: boolean; button?: boolean }) {
   };
   const systemDark = Object.assign(new EventTarget(), { matches: opts.osDark });
   const metas = [{ content: '#f2f6fe' }, { content: '#050a22' }];
-  const word = { textContent: '' };
   const button = Object.assign(new EventTarget(), {
     hidden: true,
     label: '',
+    to: '', // data-to: the look a press leads to; CSS shows the sun for 'light' and the moon for 'dark' (12.20)
     setAttribute(k: string, v: string) {
       if (k === 'aria-label') this.label = v;
+      if (k === 'data-to') this.to = v;
     },
-    querySelector: (sel: string) => (sel === '[data-theme-word]' ? word : null),
   });
   const look = () => {
     const t = attrs.get('data-theme');
@@ -174,7 +174,7 @@ function fakeEnv(opts: { stored?: string; osDark: boolean; button?: boolean }) {
     systemDark.matches = dark;
     systemDark.dispatchEvent(new Event('change'));
   };
-  return { attrs, classes, metas, word, button, storage, onChange, handle, press, osChange, doc };
+  return { attrs, classes, metas, button, storage, onChange, handle, press, osChange, doc };
 }
 
 describe('initTheme (4.6.5-4.6.7)', () => {
@@ -185,12 +185,12 @@ describe('initTheme (4.6.5-4.6.7)', () => {
     vi.useRealTimers();
   });
 
-  it('follows the OS by default: no data-theme, original metas, the word names the other look, button shown', () => {
+  it('follows the OS by default: no data-theme, original metas, the icon names the other look, button shown', () => {
     const e = fakeEnv({ osDark: true });
     expect(e.handle.theme).toBe('dark');
     expect(e.attrs.has('data-theme')).toBe(false);
     expect(e.metas.map((m) => m.content)).toEqual(['#f2f6fe', '#050a22']);
-    expect(e.word.textContent).toBe('light');
+    expect(e.button.to).toBe('light');
     expect(e.button.label).toBe('Switch to light mode');
     expect(e.button.hidden).toBe(false);
     expect(e.handle.colors.f3).toEqual(parseHex('#e8eeff'));
@@ -201,7 +201,7 @@ describe('initTheme (4.6.5-4.6.7)', () => {
     expect(e.handle.theme).toBe('light');
     expect(e.attrs.get('data-theme')).toBe('light');
     expect(e.metas.map((m) => m.content)).toEqual(['#f2f6fe', '#f2f6fe']);
-    expect(e.word.textContent).toBe('dark');
+    expect(e.button.to).toBe('dark');
     expect(e.handle.colors.f3).toEqual(parseHex('#0832b8'));
   });
 
@@ -214,7 +214,7 @@ describe('initTheme (4.6.5-4.6.7)', () => {
     expect(e.onChange).toHaveBeenCalledWith(readFieldColors(e.doc as unknown as Document), true);
     expect(e.onChange.mock.calls[0][0].f0).toEqual(parseHex('#f2f6fe'));
     expect(e.metas.map((m) => m.content)).toEqual(['#f2f6fe', '#f2f6fe']);
-    expect(e.word.textContent).toBe('dark');
+    expect(e.button.to).toBe('dark');
     expect(e.button.label).toBe('Switch to dark mode');
     expect(e.handle.theme).toBe('light');
     vi.advanceTimersByTime(319);
@@ -249,7 +249,7 @@ describe('initTheme (4.6.5-4.6.7)', () => {
     e.osChange(false);
     expect(e.handle.theme).toBe('light');
     expect(e.onChange).toHaveBeenLastCalledWith(readFieldColors(e.doc as unknown as Document), true);
-    expect(e.word.textContent).toBe('dark');
+    expect(e.button.to).toBe('dark');
     expect(e.storage.map.has('pn.theme')).toBe(false);
     const stored = fakeEnv({ stored: 'dark', osDark: true });
     stored.osChange(false);

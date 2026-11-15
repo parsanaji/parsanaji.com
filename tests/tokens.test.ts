@@ -198,37 +198,30 @@ describe('band fit (3.1.13, 3.1.16; slice-1 review I1)', () => {
   const toggleRule = CSS.slice(toggleStart, CSS.indexOf('}', toggleStart));
   const baseStart = CSS.indexOf('.theme-toggle {');
   const baseRule = CSS.slice(baseStart, CSS.indexOf('}', baseStart));
-  const padOf = (rule: string): number | undefined => {
-    const m = rule.match(/padding: 0 ([0-9.]+)ch;/);
-    return m ? Number(m[1]) : undefined;
-  };
-  const padCh = padOf(toggleRule) ?? padOf(baseRule) ?? NaN; // the band inherits the base chip padding unless it overrides it
+  const chip = Number(toggleRule.match(/--toggle: ([\d.]+)px;/)?.[1] ?? NaN);
 
-  it('gives the band toggle its own, tighter padding', () => {
+  it('makes the toggle a --toggle square, 44 px on the band (12.20)', () => {
     expect(toggleStart).toBeGreaterThan(bandStart);
-    expect(padOf(toggleRule)).toBeDefined();
-    expect(padCh).toBeLessThan(2.5);
+    expect(baseRule).toContain('width: var(--toggle);');
+    expect(baseRule).toContain('height: var(--toggle);');
+    expect(baseRule).toContain('padding: 0;');
+    expect(chip).toBe(44);
   });
 
   it.each([320, 360, 375, 390, 414, 430, 480, 540, 600, 719])('clears the chip by 8 px at %i px', (w) => {
     const gutter = clampAt(band['--gutter'], w);
     const fsName = clampAt(band['--fs-name'], w);
-    const fsLink = clampAt(band['--fs-link'], w);
     // "Parsa Naji": 10 glyphs at JetBrains Mono's 0.6 em advance, letter-spacing -0.025 em (the -0.045 em margin is slack)
     const nameRight = gutter + (10 * 0.6 - 10 * 0.025) * fsName;
-    // the chip: the 5ch word box plus the padding on both sides, 1 px border each side
-    const chipLeft = w - gutter - ((5 + 2 * padCh) * 0.6 * fsLink + 2);
+    const chipLeft = w - gutter - chip; // the square touch target (12.21: no visible chip)
     expect(chipLeft - nameRight).toBeGreaterThanOrEqual(8);
   });
 
-  it('keeps the band bracket affordance inside the tighter chip', () => {
-    const bandEnd = CSS.indexOf('\n}\n', bandStart);
-    const bandCss = CSS.slice(bandStart, bandEnd);
-    const before = bandCss.match(/\.theme-word::before \{ padding-right: ([\d.]+)ch; \}/)?.[1];
-    const after = bandCss.match(/\.theme-word::after {2}\{ padding-left: ([\d.]+)ch; \}/)?.[1];
-    expect(before).toBeDefined();
-    expect(after).toBe(before);
-    expect(Number(before) + 1).toBeLessThanOrEqual(padCh); // bracket glyph (1ch) plus its gap fits in the padding
+
+  it('shows the sun for the light target and the moon for the dark one, with no word or brackets (12.20)', () => {
+    expect(CSS).toContain('.theme-toggle[data-to="light"] .theme-icon--sun,\n.theme-toggle[data-to="dark"] .theme-icon--moon { opacity: 1; transform: none; }');
+    expect(CSS).not.toContain('theme-word');
+    expect(CSS).toContain('  .theme-toggle, .theme-icon,');
   });
 });
 

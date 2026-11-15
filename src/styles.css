@@ -315,6 +315,7 @@ html.no-webgl .scrim { display: none; }
 }
 .rows--compact .row { padding-block: calc(var(--row-pad) * 0.5); border-top: 0; }
 .pname { color: var(--fg); }
+.org { color: inherit; }            /* the organisation link keeps the .sub colour, not the browser's link blue */
 /* project links: a hairline underline at rest says "link"; hover and focus turn it and the name accent (3.5.2: two cues) */
 a.pname,
 a.org {
@@ -460,55 +461,46 @@ a.org:focus-visible { text-decoration-thickness: 2px; }
   100% { transform: scale(2.8); opacity: 0; }
 }
 
-/* ---------- theme toggle: the target-look word on a chip, top-right on the name's line (3.1.16) ---------- */
+/* ---------- theme toggle: a sun or a moon (the target look) on a quiet square chip, top-right on the name's line (3.1.16, 12.20) ---------- */
 .theme-toggle {
   position: fixed;
   z-index: 3;
   top: calc(var(--pad-y) + var(--fs-name) / 2 - var(--toggle) / 2);
   right: max(var(--gutter), env(safe-area-inset-right, 0px));
-  min-height: var(--toggle);
+  width: var(--toggle);
+  height: var(--toggle);
   display: inline-grid;
-  place-items: center;
-  padding: 0 2.5ch;
+  place-items: center end;           /* the icon hangs on the right gutter; the square stays as the touch target */
+  padding: 0;
   margin: 0;
-  border: 1px solid var(--overlay-border);
+  border: 0;
   border-radius: 4px;
-  background: var(--overlay-bg);
-  color: var(--fg);
-  font: inherit;
-  font-size: var(--fs-link);
-  line-height: 1.45;
+  background: none;                 /* 12.21: no chip, only the icon */
+  color: var(--fg-2);
   cursor: pointer;
+  transition: color 0.15s ease;
 }
 .theme-toggle[hidden] { display: none; }
 .theme-toggle:focus { outline: none; }
-.theme-word {
-  position: relative;
-  display: inline-block;
-  min-width: 5ch;                   /* "light" is 5ch: both words occupy the same box, nothing moves */
-  text-align: center;
-  transition: color 0.15s ease;
-}
-.theme-word::before,
-.theme-word::after {
-  position: absolute;
-  top: 0;
-  color: var(--accent-2);
+.theme-toggle:hover,
+.theme-toggle:focus-visible { color: var(--accent-2); }
+.theme-toggle:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: 3px; }   /* colour + ring: two cues (3.5.2) */
+/* both icons share one cell; data-to (set by themeController) names the look a press leads to: sun = light, moon = dark */
+.theme-icon {
+  grid-area: 1 / 1;
+  width: calc(var(--toggle) * 0.46);
+  height: calc(var(--toggle) * 0.46);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   opacity: 0;
-  transition: opacity 0.15s ease;
-  pointer-events: none;
+  transform: rotate(-60deg) scale(0.7);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-.theme-word::before { content: "["; content: "[" / ""; right: 100%; padding-right: 1ch; }
-.theme-word::after  { content: "]"; content: "]" / ""; left: 100%;  padding-left: 1ch; }
-.theme-toggle:hover .theme-word,
-.theme-toggle:focus-visible .theme-word { color: var(--accent-2); }
-.theme-toggle:hover .theme-word::before, .theme-toggle:hover .theme-word::after,
-.theme-toggle:focus-visible .theme-word::before, .theme-toggle:focus-visible .theme-word::after { opacity: 1; }
-.theme-toggle:focus-visible .theme-word {
-  text-decoration: underline 1px;
-  text-underline-offset: 0.35em;
-  text-decoration-color: var(--focus-ring);
-}
+.theme-toggle[data-to="light"] .theme-icon--sun,
+.theme-toggle[data-to="dark"] .theme-icon--moon { opacity: 1; transform: none; }
 
 /* ---------- "?" shortcuts overlay (native modal <dialog>, 3.5.5) ---------- */
 .keys {
@@ -606,8 +598,9 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
 
 /* ---------- phone layout: portrait phones and tablets, BAND_QUERY (3.1.1; 3.1.13 as amended by 12.16) ----------
    One screen, no scroll. The field is the whole viewport behind the content (its rail-layout box) under a flat
-   scrim, so the dashes stay faint everywhere and the entry name forms at the screen's centre. Rows flow inline,
-   the rhythm follows the small viewport height, and the ladder below trims Misc and Projects on short screens. */
+   scrim, so the dashes stay faint everywhere and the entry name forms at the screen's centre. Rows stack in two lines
+   and Misc is a set of chips (12.19); the rhythm follows the small viewport height, and the ladder below trims
+   Misc on short screens. */
 @media (max-width: 719.98px), not all and (min-aspect-ratio: 1/1) {
   :root {
     --gutter:     clamp(16px, 4.6vw, 28px);
@@ -616,14 +609,15 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
     --fs-body:    clamp(13px, 3.5vw, 15.5px);
     --fs-when:    clamp(12px, 3.15vw, 13.5px);
     --fs-eyebrow: clamp(11px, 2.9vw, 12.5px);
-    --fs-misc:    clamp(12.5px, 3.3vw, 14.5px);
+    --fs-sub:     clamp(12px, 3.2vw, 14px);
+    --fs-misc:    clamp(11.5px, 3.05vw, 13.5px);
     --fs-link:    clamp(15px, 4vw, 17px);
     --fs-meta:    clamp(11px, 2.95vw, 12.5px);
     --pad-y:       clamp(14px, 3vh, 32px);
     --gap-tag:     clamp(6px, 1.4vh, 12px);
     --gap-block:   clamp(12px, 3.2vh, 32px);
     --gap-eyebrow: 8px;
-    --row-pad:     clamp(4px, 0.9vh, 8px);
+    --row-pad:     clamp(3px, 0.7vh, 7px);
     --gap-foot:    clamp(12px, 2.6vh, 28px);
     --gap-meta:    clamp(8px, 1.4vh, 12px);
   }
@@ -633,7 +627,7 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
       --pad-y:     clamp(14px, 3svh, 32px);
       --gap-tag:   clamp(6px, 1.4svh, 12px);
       --gap-block: clamp(12px, 3.2svh, 32px);
-      --row-pad:   clamp(4px, 0.9svh, 8px);
+      --row-pad:   clamp(3px, 0.7svh, 7px);
       --gap-foot:  clamp(12px, 2.6svh, 28px);
       --gap-meta:  clamp(8px, 1.4svh, 12px);
     }
@@ -656,9 +650,19 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
   .rail > .block--misc { margin-top: var(--gap-block); }
   .rail > .links { margin-top: auto; padding-top: var(--gap-foot); }
 
-  /* rows flow inline: "2025 —  Software Developer · Koreex Systems"; Projects stay on the desktop rail (12.17) */
-  .row { display: block; }
-  .when { margin-right: 0.9em; }
+  /* rows stack (12.19): the role with its years at the right edge, the organisation on its own quieter line below.
+     .what dissolves so its text and its .sub become grid items; the gap between rows replaces the hairline.
+     Projects stay on the desktop rail (12.17). */
+  .row { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1.2em; }
+  .row + .row { border-top: 0; }
+  .what { display: contents; }
+  .when { grid-column: 2; grid-row: 1; }
+  .sub { grid-column: 1 / -1; grid-row: 2; font-size: var(--fs-sub); line-height: 1.45; }
+  .sub::before { content: none; }
+  /* Misc is a set of chips, not a run of text (12.19) */
+  .tags { --sep: 0px; gap: 5px; margin-left: 0; line-height: 1.5; }
+  .tags li { padding: 0.1em 0.6em; border: 1px solid var(--line); border-radius: 4px; }
+  .tags li::before { content: none; }
   .rail > .block--proj { display: none; }   /* 12.17: the Koreex link in Experience stands in for the project list */
 
   /* the field keeps its rail box (the whole viewport, behind the content); a flat scrim keeps the dashes faint */
@@ -682,11 +686,8 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
     z-index: 5;
     top: calc(var(--pad-y) + env(safe-area-inset-top, 0px) + var(--fs-name) / 2 - var(--toggle) / 2);
     right: max(var(--gutter), env(safe-area-inset-right, 0px));
-    --toggle: 44px;
-    padding: 0 1.5ch;               /* 3.1.16.1 amended (12.8): a narrower chip; the brackets below fit its padding */
+    --toggle: 44px;                 /* a 44 px square touch target (12.20) */
   }
-  .theme-word::before { padding-right: 0.25ch; }
-  .theme-word::after  { padding-left: 0.25ch; }
   .lnk { --hit: 0.65em; }           /* 15.6 px × (1.45 + 1.3) ≈ 43–47 px touch target */
   .links ul { row-gap: 1em; }
 }
@@ -696,13 +697,15 @@ html[data-entry="run"] .scrim { animation: pn-failsafe 1ms linear 4000ms forward
     position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
     overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
   }
+  :root { --gap-block: 12px; }                 /* 12.19: the blocks and the chip rows close up on the shortest screens */
+  .tags { gap: 4px; }
 }
 
 /* ---------- reduced motion (3.6.4): after the entry hooks, so it wins ---------- */
 @media (prefers-reduced-motion: reduce) {
   .dot::after { animation: none; opacity: 0; }
   .lnk, .lnk::before, .lnk::after,
-  .theme-toggle, .theme-word, .theme-word::before, .theme-word::after,
+  .theme-toggle, .theme-icon,
   .keys { transition: none; }
   html[data-entry] [data-reveal],
   html[data-entry] .scrim { opacity: 1; transform: none; transition: none; animation: none; pointer-events: auto; }

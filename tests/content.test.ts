@@ -77,9 +77,10 @@ describe('index.html DOM contract (4.3.2, 3.1.4)', () => {
   });
 
   it('has the toggle as the last child of main: data-reveal 0, hidden, no aria-label, no aria-pressed', () => {
-    expect(body).toMatch(
-      /<button class="theme-toggle" type="button" data-theme-toggle data-reveal="0" hidden><span class="theme-word" data-theme-word><\/span><\/button>\n {2}<\/main>/,
+    expect(body).toContain(
+      '<button class="theme-toggle" type="button" data-theme-toggle data-reveal="0" hidden><svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.28 5.28l1.42 1.42M17.3 17.3l1.42 1.42M5.28 18.72l1.42-1.42M17.3 6.7l1.42-1.42"/></svg><svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg></button>\n  </main>',
     );
+    expect(HTML).not.toContain('theme-word'); // 12.20: a sun and a moon, no word
     expect(HTML).not.toContain('aria-pressed');
     expect(body.slice(body.indexOf('<button class="theme-toggle"'))).not.toMatch(/^<button[^>]*aria-label/);
   });
