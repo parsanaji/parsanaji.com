@@ -28,7 +28,7 @@ describe('index.html copy (3.1.3)', () => {
   it('has every row, in order, with the sr-only date phrases', () => {
     expect(all(/<li class="row">([\s\S]*?)<\/li>/g, body).map(textOf)).toEqual([
       '2025 — to present Software Developer Koreex Systems',
-      '2026 — to present AI Specialist / Developer Expedient Labs',
+      '2026 — to present AI Specialist / Developer Dreiton Labs',
       '2025 Calculus Tutor Saddleback College',
       'parsanaji.com This site. WebGL2 dash field.',
       'SolScope Microcap cryptocurrency tracker.',
@@ -202,6 +202,17 @@ describe('Koreex link (3.1.4 item 5, 12.17)', () => {
     expect(html).toContain(
       '<span class="what">Software Developer <span class="sub"><a class="org" href="https://koreex.com/" target="_blank" rel="noopener">Koreex Systems</a></span></span>',
     );
-    expect(html.match(/class="org"/g)).toHaveLength(1);
+    expect(html.match(/class="org"/g)).toHaveLength(2);
+  });
+});
+
+// 12.22 (Parsa, 2026-11-14): Experience row 2 names "Dreiton Labs" and links to the Dreiton site, like the Koreex row.
+describe('Dreiton link (3.1.4 item 5, 12.22)', () => {
+  it('wraps the Dreiton Labs org in an anchor to https://dreiton.ai/ that opens a new tab', () => {
+    const html = readFileSync('index.html', 'utf8').replace(/\r\n/g, '\n');
+    expect(html).toContain(
+      '<span class="what">AI Specialist / Developer <span class="sub"><a class="org" href="https://dreiton.ai/" target="_blank" rel="noopener">Dreiton Labs</a></span></span>',
+    );
+    expect(html).not.toContain('Expedient');
   });
 });

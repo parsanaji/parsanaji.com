@@ -46,7 +46,7 @@ Rules:
       <h2 class="eyebrow" id="h-exp">Experience</h2>
       <ul class="rows" role="list">
         <li class="row"><span class="when">2025 <span aria-hidden="true">—</span><span class="sr-only">to present</span></span><span class="what">Software Developer <span class="sub">Koreex Systems</span></span></li>
-        <li class="row"><span class="when">2026 <span aria-hidden="true">—</span><span class="sr-only">to present</span></span><span class="what">AI Specialist / Developer <span class="sub">Expedient Labs</span></span></li>
+        <li class="row"><span class="when">2026 <span aria-hidden="true">—</span><span class="sr-only">to present</span></span><span class="what">AI Specialist / Developer <span class="sub">Dreiton Labs</span></span></li>
         <li class="row"><span class="when">2025</span><span class="what">Calculus Tutor <span class="sub">Saddleback College</span></span></li>
       </ul>
     </section>
